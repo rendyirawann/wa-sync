@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WA Service — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --ink:#1a1a27; --ink2:#4b5260; --muted:#9ca3b4; --line:#eef0f4;
+  --wa:#25d366; --primary:#15a85b; --primary2:#0e8a4a; --primary-soft:#e7f8ee;
+  --danger:#f1416c; --danger-soft:#fceaf0; --warn:#f6a609; --warn-soft:#fef3dd; --info:#7239ea; --info-soft:#f0eafe;
+  --side:#15151f; --side2:#1e1e2b; --side-tx:#9a9cb0; --side-label:#5b5d72;
+  --r:12px; --sh:0 6px 24px rgba(20,25,50,.06); --sh2:0 2px 8px rgba(20,25,50,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",monospace}
+.ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+.app{display:flex;min-height:100vh}
+.side{width:266px;background:var(--side);color:var(--side-tx);flex:none;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:50}
+.main{margin-left:266px;flex:1;min-width:0;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:22px 22px 20px}
+.brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--wa),#10a85b);display:grid;place-items:center;box-shadow:0 6px 16px rgba(37,211,102,.35)}
+.brand .logo svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2}
+.brand b{color:#fff;font-size:16px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.1}
+.brand small{color:var(--side-label);font-size:10px;letter-spacing:.18em;font-weight:600}
+.nav{padding:6px 14px;overflow-y:auto;flex:1}
+.nav .lbl{color:var(--side-label);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:18px 12px 8px}
+.nav a{display:flex;align-items:center;gap:13px;padding:10px 12px;border-radius:9px;color:var(--side-tx);font-weight:500;font-size:13.5px;margin:2px 0;transition:.15s;position:relative}
+.nav a:hover{background:var(--side2);color:#e8e9f0}
+.nav a.on{background:rgba(37,211,102,.12);color:#fff}
+.nav a.on .ic{color:var(--wa)}
+.nav a .ic{color:#6e7088}
+.nav a .pill{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:#c7c9d6;padding:2px 8px;border-radius:20px}
+.nav a.on .pill{background:var(--wa);color:#05130b}
+.plan{margin:14px;padding:16px;border-radius:12px;background:linear-gradient(160deg,#23232f,#1a1a25);border:1px solid rgba(255,255,255,.05)}
+.plan .pt{display:flex;align-items:center;justify-content:space-between;color:#fff;font-weight:600;font-size:13px}
+.plan .pt span{font-size:10px;font-weight:700;letter-spacing:.08em;color:#05130b;background:var(--wa);padding:3px 8px;border-radius:6px}
+.plan .bar{height:7px;border-radius:6px;background:rgba(255,255,255,.1);margin:12px 0 8px;overflow:hidden}
+.plan .bar i{display:block;height:100%;width:50%;border-radius:6px;background:linear-gradient(90deg,var(--wa),#10a85b)}
+.plan p{color:var(--side-tx);font-size:12px}
+.plan a.up{display:block;text-align:center;margin-top:12px;background:#fff;color:#15151f;font-weight:600;font-size:12.5px;padding:9px;border-radius:8px}
+.head{background:var(--card);border-bottom:1px solid var(--line);padding:0 30px;height:74px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:30}
+.burger{display:none;background:var(--bg);border-radius:8px;padding:8px}
+.head .ttl h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.head .ttl .crumb{font-size:12.5px;color:var(--muted);display:flex;gap:7px;align-items:center;margin-top:2px}
+.head .crumb b{color:var(--ink2);font-weight:500}
+.search{margin-left:auto;display:flex;align-items:center;gap:9px;background:var(--bg);border-radius:9px;padding:9px 14px;width:260px;color:var(--muted)}
+.search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;color:var(--ink);width:100%}
+.iconbtn{position:relative;width:42px;height:42px;border-radius:10px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)}
+.iconbtn .dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--card)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;transition:.15s}
+.btn-pri{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(21,168,91,.28)}
+.btn-pri:hover{background:var(--primary2)}
+.user{display:flex;align-items:center;gap:10px;padding-left:6px}
+.avatar{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#7239ea,#b07cff);color:#fff;display:grid;place-items:center;font-weight:700}
+.user .nm{font-size:13.5px;font-weight:600;line-height:1.1}
+.user .rl{font-size:11.5px;color:var(--muted)}
+.wrap{padding:28px 30px 40px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.stat{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px}
+.stat .top{display:flex;align-items:center;justify-content:space-between}
+.stat .ico{width:46px;height:46px;border-radius:11px;display:grid;place-items:center}
+.stat .ico.g{background:var(--primary-soft);color:var(--primary)}
+.stat .ico.p{background:var(--info-soft);color:var(--info)}
+.stat .ico.b{background:#e9f2ff;color:#2f7bf6}
+.stat .ico.o{background:var(--warn-soft);color:var(--warn)}
+.stat .chg{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:3px;padding:4px 8px;border-radius:7px}
+.chg.up{color:var(--primary);background:var(--primary-soft)}
+.chg.dn{color:var(--danger);background:var(--danger-soft)}
+.stat .num{font-size:29px;font-weight:800;letter-spacing:-.02em;margin-top:16px;font-variant-numeric:tabular-nums}
+.stat .num small{font-size:16px;color:var(--muted);font-weight:600}
+.stat .cap{color:var(--muted);font-size:12.5px;margin-top:3px;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:20px;margin-top:20px}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:500}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:9px}
+.tabs button{font-size:12.5px;font-weight:600;color:var(--ink2);padding:6px 13px;border-radius:7px}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh2)}
+.chart{padding:14px 14px 8px}
+.chart svg{width:100%;height:230px;display:block}
+.chart .xl{display:flex;justify-content:space-between;padding:6px 10px 6px;color:var(--muted);font-size:11.5px;font-weight:500}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:13px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:15px 22px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+.numrow{display:flex;align-items:center;gap:12px}
+.flag{width:38px;height:38px;border-radius:9px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.numrow .n b{font-weight:600;display:block}
+.numrow .n .s{font-size:12px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px}
+.badge.ok{color:var(--primary);background:var(--primary-soft)}
+.badge.warn{color:#b9790a;background:var(--warn-soft)}
+.badge.off{color:var(--danger);background:var(--danger-soft)}
+.badge.ban{color:var(--ink2);background:#eef0f4}
+.badge .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.ok .d{animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+.acts{display:flex;gap:6px}
+.acts button{width:34px;height:34px;border-radius:8px;background:var(--bg);color:var(--ink2);display:grid;place-items:center;transition:.15s}
+.acts button:hover{background:#e9ecf2;color:var(--ink)}
+.acts button.red:hover{background:var(--danger-soft);color:var(--danger)}
+.qr-card{padding:22px;text-align:center}
+.qr-box{position:relative;width:200px;height:200px;margin:6px auto 16px;border-radius:14px;background:#fff;border:1px solid var(--line);padding:14px;box-shadow:var(--sh2)}
+.qr-box svg{width:100%;height:100%;display:block}
+.qr-wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.qr-wm svg{width:24px;height:24px;stroke:var(--wa);fill:none;stroke-width:2}
+.qr-card h3{font-size:16px;font-weight:700}
+.steps{text-align:left;margin:14px 0 16px;display:flex;flex-direction:column;gap:10px}
+.steps li{display:flex;gap:11px;align-items:flex-start;font-size:13px;color:var(--ink2);list-style:none}
+.steps .k{width:22px;height:22px;border-radius:50%;background:var(--primary-soft);color:var(--primary);font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none;margin-top:1px}
+.qr-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.exp{font-size:12.5px;color:var(--muted);font-weight:500}
+.exp b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn-soft{display:inline-flex;align-items:center;gap:7px;background:var(--primary-soft);color:var(--primary);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px}
+.btn-soft:hover{background:#d9f3e4}
+.feed{padding:8px 22px 18px}
+.feed .it{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--line)}
+.feed .it:last-child{border-bottom:none}
+.feed .dotc{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}
+.dotc.g{background:var(--primary-soft);color:var(--primary)}
+.dotc.r{background:var(--danger-soft);color:var(--danger)}
+.dotc.b{background:#e9f2ff;color:#2f7bf6}
+.dotc.o{background:var(--warn-soft);color:var(--warn)}
+.feed .it .tx{font-size:13px;color:var(--ink)}
+.feed .it .tx b{font-weight:600}
+.feed .it .tm{font-size:11.5px;color:var(--muted);margin-top:2px}
+.foot{padding:8px 30px 26px;display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;flex-wrap:wrap;gap:8px}
+.foot a{color:var(--ink2);font-weight:500;margin-left:18px}
+.scrim{display:none}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:992px){
+  .side{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+  body.open .side{transform:none}
+  .main{margin-left:0}
+  .burger{display:grid}
+  .search{display:none}
+  body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40}
+}
+@media (max-width:600px){.stats{grid-template-columns:1fr}.wrap{padding:18px}.head{padding:0 16px}.user .nm,.user .rl{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-device" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 20a5.2 5.2 0 0 0-2-4"/></symbol>
+<symbol id="i-cast" viewBox="0 0 24 24"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6.1A8.4 8.4 0 1 1 21 11.5Z"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8-8M15 5l3 3M18 8l2-2"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.18-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1Z"/></symbol>
+<symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0Zm6 9v5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M21 21v-4M14 21h3"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9M7 6a8 8 0 1 0 10 0"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5"/></symbol>
+<symbol id="i-dn" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+<symbol id="i-wa" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 20 11.5Z"/><path d="M8.5 9.2c.2-.6.4-.6.7-.6h.5c.2 0 .4 0 .6.5l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.1-.2.3-.1.5.3.6 1.2 1.6 2.1 2 .2.1.4.1.5 0l.6-.6c.2-.2.3-.2.5-.1l1.5.8c.2.1.3.3.3.4 0 .8-.7 1.4-1.4 1.5-1.3.1-3-.7-4.2-1.9-1.1-1.1-1.9-2.6-2-3.9 0-.6.2-1 .3-1.3Z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></symbol>
+</defs></svg>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24"><use href="#i-wa"/></svg></div>
+      <div><b>WA Service</b><small>MULTI&#8209;SESSION</small></div>
+    </div>
+    <nav class="nav">
+      <div class="lbl">Menu</div>
+      <a class="on" href="#"><svg class="ic"><use href="#i-grid"/></svg> Dashboard</a>
+      <a href="#"><svg class="ic"><use href="#i-device"/></svg> Sessions <span class="pill">5</span></a>
+      <a href="#"><svg class="ic"><use href="#i-users"/></svg> Subscribers</a>
+      <a href="#"><svg class="ic"><use href="#i-cast"/></svg> Broadcast</a>
+      <a href="#"><svg class="ic"><use href="#i-chat"/></svg> Messages <span class="pill">12</span></a>
+      <div class="lbl">Developer</div>
+      <a href="#"><svg class="ic"><use href="#i-key"/></svg> API Keys</a>
+      <a href="#"><svg class="ic"><use href="#i-plug"/></svg> Webhooks</a>
+      <a href="#"><svg class="ic"><use href="#i-list"/></svg> Logs</a>
+      <div class="lbl">Account</div>
+      <a href="#"><svg class="ic"><use href="#i-card"/></svg> Billing &amp; Plan</a>
+      <a href="#"><svg class="ic"><use href="#i-gear"/></svg> Settings</a>
+    </nav>
+    <div class="plan">
+      <div class="pt">Pro Plan <span>ACTIVE</span></div>
+      <div class="bar"><i></i></div>
+      <p>5 dari 10 sesi terpakai</p>
+      <a class="up" href="#">Upgrade plan</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="head">
+      <button class="burger" onclick="document.body.classList.toggle('open')"><svg class="ic"><use href="#i-list"/></svg></button>
+      <div class="ttl">
+        <h1>Dashboard</h1>
+        <div class="crumb">Home <span>•</span> <b>Overview</b></div>
+      </div>
+      <div class="search"><svg class="ic" style="width:18px;height:18px"><use href="#i-search"/></svg><input placeholder="Cari nomor, subscriber, log…"></div>
+      <button class="iconbtn"><svg class="ic"><use href="#i-bell"/></svg><span class="dot"></span></button>
+      <button class="btn btn-pri"><svg class="ic" style="width:18px;height:18px"><use href="#i-plus"/></svg> Connect Number</button>
+      <div class="user">
+        <div class="avatar">BY</div>
+        <div><div class="nm">Bayu</div><div class="rl">Owner</div></div>
+      </div>
+    </header>
+    <div class="wrap">
+      <section class="stats">
+        <div class="stat"><div class="top"><div class="ico g"><svg class="ic"><use href="#i-device"/></svg></div><span class="chg up"><svg class="ic" style="width:13px;height:13px"><use href="#i-up"/></svg>+2</span></div><div class="num">5 <small>/ 10</small></div><div class="cap">Sesi aktif</div></div>
+        <div class="stat"><div class="top"><div class="ico p"><svg class="ic"><use href="#i-users"/></svg></div><span class="chg up"><svg class="ic" style="width:13px;height:13px"><use href="#i-up"/></svg>+38</span></div><div class="num">1.284</div><div class="cap">Subscriber berlangganan</div></div>
+        <div class="stat"><div class="top"><div class="ico b"><svg class="ic"><use href="#i-send"/></svg></div><span class="chg up"><svg class="ic" style="width:13px;height:13px"><use href="#i-up"/></svg>12,4%</span></div><div class="num">86.420</div><div class="cap">Pesan terkirim (30 hari)</div></div>
+        <div class="stat"><div class="top"><div class="ico o"><svg class="ic"><use href="#i-bolt"/></svg></div><span class="chg dn"><svg class="ic" style="width:13px;height:13px"><use href="#i-dn"/></svg>0,3%</span></div><div class="num">98,7%</div><div class="cap">Tingkat keterkiriman</div></div>
+      </section>
+      <div class="grid">
+        <div class="col">
+          <div class="panel">
+            <div class="ph"><div><h3>Lalu lintas pesan</h3><div class="sub">Terkirim vs diterima · 14 hari terakhir</div></div><div class="tabs"><button>Hari</button><button class="on">Minggu</button><button>Bulan</button></div></div>
+            <div class="chart">
+              <svg viewBox="0 0 720 230" preserveAspectRatio="none">
+                <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#25d366" stop-opacity=".28"/><stop offset="1" stop-color="#25d366" stop-opacity="0"/></linearGradient><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7239ea" stop-opacity=".16"/><stop offset="1" stop-color="#7239ea" stop-opacity="0"/></linearGradient></defs>
+                <g stroke="#eef0f4" stroke-width="1"><line x1="0" y1="40" x2="720" y2="40"/><line x1="0" y1="95" x2="720" y2="95"/><line x1="0" y1="150" x2="720" y2="150"/><line x1="0" y1="205" x2="720" y2="205"/></g>
+                <path d="M0,150 C60,130 90,90 150,100 C210,110 240,60 300,70 C360,80 390,40 450,55 C510,68 540,90 600,72 C660,56 690,80 720,68 L720,230 L0,230 Z" fill="url(#gb)"/>
+                <path d="M0,150 C60,130 90,90 150,100 C210,110 240,60 300,70 C360,80 390,40 450,55 C510,68 540,90 600,72 C660,56 690,80 720,68" fill="none" stroke="#7239ea" stroke-width="2.5" opacity=".5"/>
+                <path d="M0,180 C60,170 90,150 150,158 C210,166 240,120 300,128 C360,136 390,100 450,112 C510,124 540,140 600,120 C660,100 690,118 720,104 L720,230 L0,230 Z" fill="url(#ga)"/>
+                <path d="M0,180 C60,170 90,150 150,158 C210,166 240,120 300,128 C360,136 390,100 450,112 C510,124 540,140 600,120 C660,100 690,118 720,104" fill="none" stroke="#25d366" stroke-width="3"/>
+                <circle cx="450" cy="112" r="5" fill="#fff" stroke="#25d366" stroke-width="3"/>
+              </svg>
+              <div class="xl"><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="ph"><div><h3>Sesi WhatsApp</h3><div class="sub">Perangkat yang terhubung lewat Baileys</div></div><button class="btn-soft"><svg class="ic" style="width:16px;height:16px"><use href="#i-plus"/></svg> Tambah sesi</button></div>
+            <div style="overflow-x:auto">
+            <table class="tbl">
+              <thead><tr><th>Nomor</th><th>Subscriber</th><th>Status</th><th>Pesan 24j</th><th>Terakhir aktif</th><th>Aksi</th></tr></thead>
+              <tbody>
+                <tr><td><div class="numrow"><div class="flag">ID</div><div class="n"><b class="mono">+62 812-9981-0021</b><span class="s">Session #01</span></div></div></td><td>Toko Berkah Jaya</td><td><span class="badge ok"><span class="d"></span>Connected</span></td><td class="mono">3.214</td><td>Baru saja</td><td><div class="acts"><button title="QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button><button title="Restart"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button><button class="red" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button></div></td></tr>
+                <tr><td><div class="numrow"><div class="flag">ID</div><div class="n"><b class="mono">+62 877-4410-7788</b><span class="s">Session #02</span></div></div></td><td>Hijab Anindya</td><td><span class="badge ok"><span class="d"></span>Connected</span></td><td class="mono">1.987</td><td>2 mnt lalu</td><td><div class="acts"><button title="QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button><button title="Restart"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button><button class="red" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button></div></td></tr>
+                <tr><td><div class="numrow"><div class="flag">ID</div><div class="n"><b class="mono">+62 813-5567-1290</b><span class="s">Session #03</span></div></div></td><td>Kopi Senja Roastery</td><td><span class="badge warn"><span class="d"></span>Pairing…</span></td><td class="mono">0</td><td>Scan QR</td><td><div class="acts"><button title="QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button><button title="Restart"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button><button class="red" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button></div></td></tr>
+                <tr><td><div class="numrow"><div class="flag">ID</div><div class="n"><b class="mono">+62 851-0023-4456</b><span class="s">Session #04</span></div></div></td><td>Bengkel Motor Pakde</td><td><span class="badge off"><span class="d"></span>Disconnected</span></td><td class="mono">642</td><td>1 jam lalu</td><td><div class="acts"><button title="QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button><button title="Restart"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button><button class="red" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button></div></td></tr>
+                <tr><td><div class="numrow"><div class="flag">ID</div><div class="n"><b class="mono">+62 896-7781-3344</b><span class="s">Session #05</span></div></div></td><td>Laundry Kilat 24</td><td><span class="badge ban"><span class="d"></span>Banned</span></td><td class="mono">0</td><td>Kemarin</td><td><div class="acts"><button title="QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button><button title="Restart"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button><button class="red" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button></div></td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="panel qr-card">
+            <div class="qr-box"><svg id="qr" viewBox="0 0 100 100"></svg><div class="qr-wm"><svg viewBox="0 0 24 24"><use href="#i-wa"/></svg></div></div>
+            <h3>Hubungkan perangkat</h3>
+            <ul class="steps">
+              <li><span class="k">1</span> Buka WhatsApp di HP subscriber</li>
+              <li><span class="k">2</span> Ketuk <b>Perangkat Tertaut → Tautkan Perangkat</b></li>
+              <li><span class="k">3</span> Arahkan kamera ke kode QR ini</li>
+            </ul>
+            <div class="qr-foot"><span class="exp">Kedaluwarsa <b id="exp">0:48</b></span><button class="btn-soft" id="refreshQr"><svg class="ic" style="width:16px;height:16px"><use href="#i-refresh"/></svg> Segarkan QR</button></div>
+          </div>
+          <div class="panel">
+            <div class="ph"><div><h3>Aktivitas terbaru</h3></div><button class="iconbtn" style="width:34px;height:34px"><svg class="ic" style="width:18px;height:18px"><use href="#i-more"/></svg></button></div>
+            <div class="feed">
+              <div class="it"><div class="dotc g"><svg class="ic" style="width:17px;height:17px"><use href="#i-device"/></svg></div><div><div class="tx"><b>+62 877-4410-7788</b> berhasil terhubung</div><div class="tm">2 menit lalu</div></div></div>
+              <div class="it"><div class="dotc b"><svg class="ic" style="width:17px;height:17px"><use href="#i-cast"/></svg></div><div><div class="tx">Broadcast <b>"Promo Gajian"</b> terkirim ke 320 kontak</div><div class="tm">26 menit lalu</div></div></div>
+              <div class="it"><div class="dotc o"><svg class="ic" style="width:17px;height:17px"><use href="#i-users"/></svg></div><div><div class="tx">Subscriber baru <b>Kopi Senja Roastery</b> mendaftar</div><div class="tm">1 jam lalu</div></div></div>
+              <div class="it"><div class="dotc r"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></div><div><div class="tx">Session <b>#04</b> terputus, perlu re-scan</div><div class="tm">1 jam lalu</div></div></div>
+              <div class="it"><div class="dotc g"><svg class="ic" style="width:17px;height:17px"><use href="#i-key"/></svg></div><div><div class="tx">API key <b class="mono">wa_live_•••8f2c</b> dibuat</div><div class="tm">3 jam lalu</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="foot"><div>© 2026 WA Service · dibangun dengan Baileys</div><div><a href="#">Dokumentasi</a><a href="#">Status</a><a href="#">Dukungan</a></div></footer>
+  </div>
+</div>
+<div class="scrim" onclick="document.body.classList.remove('open')"></div>
+<script>
+function drawQR(){var N=25,cell=100/N,svg=document.getElementById('qr'),s='';function finder(x,y){s+='<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+(7*cell)+'" height="'+(7*cell)+'" rx="'+cell+'" fill="#111"/>';s+='<rect x="'+((x+1)*cell)+'" y="'+((y+1)*cell)+'" width="'+(5*cell)+'" height="'+(5*cell)+'" rx="'+(cell*.7)+'" fill="#fff"/>';s+='<rect x="'+((x+2)*cell)+'" y="'+((y+2)*cell)+'" width="'+(3*cell)+'" height="'+(3*cell)+'" rx="'+(cell*.5)+'" fill="#111"/>';}function inFinder(c,r){return (c<8&&r<8)||(c>N-9&&r<8)||(c<8&&r>N-9);}for(var r=0;r<N;r++)for(var c=0;c<N;c++){if(inFinder(c,r))continue;if(Math.random()>.5)s+='<rect x="'+(c*cell)+'" y="'+(r*cell)+'" width="'+cell+'" height="'+cell+'" rx="'+(cell*.25)+'" fill="#111"/>';}finder(0,0);finder(N-7,0);finder(0,N-7);svg.innerHTML=s;}
+drawQR();
+var t=48;function fmt(n){var m=Math.floor(n/60),s=n%60;return m+':'+(s<10?'0':'')+s;}
+setInterval(function(){t--;if(t<0){t=48;drawQR();}document.getElementById('exp').textContent=fmt(t);},1000);
+document.getElementById('refreshQr').addEventListener('click',function(){drawQR();t=48;document.getElementById('exp').textContent=fmt(t);});
+</script>
+</body>
+</html>

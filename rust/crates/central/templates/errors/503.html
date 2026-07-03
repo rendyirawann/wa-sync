@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <base href="/" />
+    <title>Pemeliharaan — {{ site_name }}</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" href="/assets/media/logos/{{ site_logo }}" />
+    <link href="/assets/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css" />
+    <link href="/assets/css/style.bundle.css" rel="stylesheet" type="text/css" />
+</head>
+<body id="kt_body" class="app-blank">
+    <div class="d-flex flex-column flex-root">
+        <div class="d-flex flex-column flex-center flex-column-fluid p-10">
+            <img src="/assets/media/logos/{{ site_logo }}" class="h-60px mb-8" alt="logo" />
+            <h1 class="fw-bolder fs-2qx text-gray-900 mb-4">Sedang Pemeliharaan</h1>
+            <div class="fw-semibold fs-5 text-gray-600 mb-8 text-center">
+                {{ site_name }} sedang dalam pemeliharaan. Silakan kembali beberapa saat lagi.
+            </div>
+            <a href="/admin/login" class="btn btn-primary">Kembali ke Login</a>
+        </div>
+    </div>
+</body>
+</html>

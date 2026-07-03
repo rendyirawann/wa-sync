@@ -1,0 +1,129 @@
+{% extends "layout/wa.html" %}
+{% block title %}{{ c_name }} — Broadcast{% endblock %}
+{% block page_title %}Detail Broadcast{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <a href="/admin/wa/broadcast">Broadcast</a> <span>•</span> <b>{{ c_name }}</b>{% endblock %}
+
+{% block style %}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:18px}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel .ph h3{font-size:16px;font-weight:800}
+.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:3px}
+.panel .bd{padding:20px 22px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;text-transform:capitalize}
+.badge.draft{color:var(--ink2);background:#eef0f4}
+.badge.scheduled{color:#7a5af0;background:#efeaff}
+.badge.running{color:#b9790a;background:var(--warn-soft)}
+.badge.paused{color:#b9790a;background:#fff3e0}
+.badge.done{color:var(--primary);background:var(--primary-soft)}
+.badge.canceled{color:var(--danger);background:var(--danger-soft)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.stat{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px 18px}
+.stat .n{font-size:26px;font-weight:800;line-height:1}
+.stat .l{font-size:11.5px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.stat.sent .n{color:var(--primary)}.stat.failed .n{color:var(--danger)}.stat.pending .n{color:#b9790a}
+.pbar{height:10px;background:var(--bg);border-radius:6px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--primary);border-radius:6px;transition:width .4s}
+.msgbox{background:var(--bg);border-radius:10px;padding:14px 16px;font-size:13.5px;white-space:pre-wrap;line-height:1.55;color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:11px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:11px 22px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.st{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:14px}
+.st.sent{color:var(--primary);background:var(--primary-soft)}
+.st.failed{color:var(--danger);background:var(--danger-soft)}
+.st.pending{color:#b9790a;background:var(--warn-soft)}
+.btn-danger{background:var(--danger-soft);color:var(--danger);font-weight:700;font-size:13.5px;padding:10px 16px;border-radius:9px;border:none;cursor:pointer}
+.acts{display:flex;gap:9px}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><div class="n" id="sTotal">{{ c_total }}</div><div class="l">Total Penerima</div></div>
+    <div class="stat sent"><div class="n" id="sSent">{{ c_sent }}</div><div class="l">Masuk Antrian</div></div>
+    <div class="stat failed"><div class="n" id="sFailed">{{ c_failed }}</div><div class="l">Gagal</div></div>
+    <div class="stat pending"><div class="n" id="sPending">{{ c_pending }}</div><div class="l">Menunggu</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <div>
+        <h3>{{ c_name }} <span class="badge {{ c_status }}" id="cBadge" style="margin-left:6px">{{ c_status }}</span></h3>
+        <div class="sub">Nomor: <b>{{ c_session }}</b>{% if c_phone %} (+{{ c_phone }}){% endif %} · Dibuat {{ c_created }}{% if c_scheduled %} · 🗓 Jadwal {{ c_scheduled }}{% endif %}</div>
+      </div>
+      <div class="acts">
+        {% if c_status == 'draft' or c_status == 'scheduled' or c_status == 'paused' %}
+        <form method="post" action="/admin/wa/broadcast/{{ c_id }}/run" style="margin:0">
+          <input type="hidden" name="_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-pri">▶ Jalankan sekarang</button>
+        </form>
+        {% endif %}
+        {% if c_status == 'draft' or c_status == 'scheduled' or c_status == 'running' or c_status == 'paused' %}
+        <form method="post" action="/admin/wa/broadcast/{{ c_id }}/cancel" style="margin:0" onsubmit="return confirm('Batalkan campaign ini?');">
+          <input type="hidden" name="_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn-danger">Batalkan</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="bd">
+      <div class="pbar"><i id="cBar" style="width:{{ c_pct }}%"></i></div>
+      <div class="note" id="cNote">{{ c_pct }}% diproses. <b>"Masuk Antrian"</b> = pesan sudah masuk antrian throttle nomor, lalu dikirim bertahap (12–30 dtk/pesan tergantung level) — bukan berarti sudah sampai ke HP penerima.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div><h3>Isi Pesan</h3><div class="sub">Variabel &amp; spintax dirender per penerima.</div></div></div>
+    <div class="bd"><div class="msgbox">{{ c_body }}</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div><h3>Penerima</h3><div class="sub">Menampilkan hingga 1.000 baris (gagal &amp; menunggu didahulukan).</div></div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Nomor</th><th>Nama</th><th>Status</th><th>Waktu</th></tr></thead>
+        <tbody>
+          {% for t in targets %}
+          <tr>
+            <td class="mono">+{{ t.phone }}</td>
+            <td>{{ t.name }}</td>
+            <td><span class="st {{ t.status }}">{{ t.status }}</span>{% if t.error %} <span style="font-size:11px;color:var(--danger)">{{ t.error }}</span>{% endif %}</td>
+            <td style="color:var(--muted)">{{ t.sent_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if targets | length == 0 %}<div style="padding:30px;text-align:center;color:var(--muted)">Belum ada penerima.</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var ID="{{ c_id }}";
+  var ACTIVE={{ c_status == 'running' or c_status == 'scheduled' }};
+  if(!ACTIVE) return; // hanya polling saat masih berjalan/terjadwal
+  var prev="{{ c_status }}";
+  function poll(){
+    fetch('/admin/wa/broadcast/'+ID+'/status',{credentials:'same-origin'})
+      .then(function(r){return r.json();})
+      .then(function(j){
+        document.getElementById('sTotal').textContent=j.total;
+        document.getElementById('sSent').textContent=j.sent;
+        document.getElementById('sFailed').textContent=j.failed;
+        document.getElementById('sPending').textContent=j.pending;
+        document.getElementById('cBar').style.width=j.pct+'%';
+        var b=document.getElementById('cBadge'); b.textContent=j.status; b.className='badge '+j.status;
+        if(j.status!==prev && (j.status==='done'||j.status==='canceled'||j.status==='paused')){
+          clearInterval(t); setTimeout(function(){location.reload();}, 800);
+        }
+        prev=j.status;
+      }).catch(function(){});
+  }
+  var t=setInterval(poll, 3000); poll();
+})();
+</script>
+{% endblock %}

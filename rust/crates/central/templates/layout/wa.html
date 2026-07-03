@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>{% block title %}Dashboard{% endblock %} · {{ site_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fa; --card:#fff; --ink:#1a1a27; --ink2:#4b5260; --muted:#9ca3b4; --line:#eef0f4;
+  --wa:#25d366; --primary:#15a85b; --primary2:#0e8a4a; --primary-soft:#e7f8ee;
+  --danger:#f1416c; --danger-soft:#fceaf0; --warn:#f6a609; --warn-soft:#fef3dd; --info:#7239ea; --info-soft:#f0eafe;
+  --side:#15151f; --side2:#1e1e2b; --side-tx:#9a9cb0; --side-label:#5b5d72;
+  --r:12px; --sh:0 6px 24px rgba(20,25,50,.06); --sh2:0 2px 8px rgba(20,25,50,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",monospace}
+.ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+.app{display:flex;min-height:100vh}
+.side{width:266px;background:var(--side);color:var(--side-tx);flex:none;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:50}
+.main{margin-left:266px;flex:1;min-width:0;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:22px 22px 20px}
+.brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--wa),#10a85b);display:grid;place-items:center;box-shadow:0 6px 16px rgba(37,211,102,.35)}
+.brand .logo svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2}
+.brand b{color:#fff;font-size:16px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.1}
+.brand small{color:var(--side-label);font-size:10px;letter-spacing:.18em;font-weight:600}
+.nav{padding:6px 14px;overflow-y:auto;flex:1}
+.nav .lbl{color:var(--side-label);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:18px 12px 8px}
+.nav a{display:flex;align-items:center;gap:13px;padding:10px 12px;border-radius:9px;color:var(--side-tx);font-weight:500;font-size:13.5px;margin:2px 0;transition:.15s;position:relative}
+.nav a:hover{background:var(--side2);color:#e8e9f0}
+.nav a.on{background:rgba(37,211,102,.12);color:#fff}
+.nav a.on .ic{color:var(--wa)}
+.nav a .ic{color:#6e7088}
+.nav a .pill{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:#c7c9d6;padding:2px 8px;border-radius:20px}
+.nav a.on .pill{background:var(--wa);color:#05130b}
+.plan{margin:14px;padding:16px;border-radius:12px;background:linear-gradient(160deg,#23232f,#1a1a25);border:1px solid rgba(255,255,255,.05)}
+.plan .pt{display:flex;align-items:center;justify-content:space-between;color:#fff;font-weight:600;font-size:13px}
+.plan .pt span{font-size:10px;font-weight:700;letter-spacing:.08em;color:#05130b;background:var(--wa);padding:3px 8px;border-radius:6px}
+.plan .bar{height:7px;border-radius:6px;background:rgba(255,255,255,.1);margin:12px 0 8px;overflow:hidden}
+.plan .bar i{display:block;height:100%;width:50%;border-radius:6px;background:linear-gradient(90deg,var(--wa),#10a85b)}
+.plan p{color:var(--side-tx);font-size:12px}
+.plan a.up{display:block;text-align:center;margin-top:12px;background:#fff;color:#15151f;font-weight:600;font-size:12.5px;padding:9px;border-radius:8px}
+.head{background:var(--card);border-bottom:1px solid var(--line);padding:0 30px;height:74px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:30}
+.burger{display:none;background:var(--bg);border-radius:8px;padding:8px}
+.head .ttl h1{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.head .ttl .crumb{font-size:12.5px;color:var(--muted);display:flex;gap:7px;align-items:center;margin-top:2px}
+.head .crumb b{color:var(--ink2);font-weight:500}
+.search{margin-left:auto;display:flex;align-items:center;gap:9px;background:var(--bg);border-radius:9px;padding:9px 14px;width:260px;color:var(--muted)}
+.search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;color:var(--ink);width:100%}
+.iconbtn{position:relative;width:42px;height:42px;border-radius:10px;background:var(--bg);display:grid;place-items:center;color:var(--ink2)}
+.iconbtn:hover{background:#e9ecf2}
+.iconbtn .dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--card)}
+.iconbtn .dot.hide{display:none}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;transition:.15s}
+.btn-pri{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(21,168,91,.28)}
+.btn-pri:hover{background:var(--primary2)}
+/* dropdowns (notif + user) */
+.dd-wrap{position:relative}
+.dd{position:absolute;top:calc(100% + 10px);right:0;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(20,25,50,.14);min-width:300px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.16s;z-index:60;overflow:hidden}
+.dd.open{opacity:1;visibility:visible;transform:none}
+.dd-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:13.5px}
+.dd-h button{font-size:12px;font-weight:600;color:var(--primary)}
+.dd-body{max-height:340px;overflow-y:auto}
+.notif-empty{padding:34px 16px;text-align:center;color:var(--muted);font-size:13px}
+.nitem{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line);transition:.12s}
+.nitem:last-child{border-bottom:none}
+.nitem:hover{background:#fafbfc}
+.nitem.unread{background:var(--primary-soft)}
+.nitem.unread:hover{background:#dff3e7}
+.nitem .nd{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--primary-soft);color:var(--primary)}
+.nitem .nt{font-size:13px;color:var(--ink);line-height:1.35}
+.nitem .nt b{font-weight:600}
+.nitem .nm2{font-size:11.5px;color:var(--muted);margin-top:2px}
+.dd-foot{padding:11px 16px;text-align:center;border-top:1px solid var(--line)}
+.dd-foot a{font-size:12.5px;font-weight:600;color:var(--primary)}
+.user{display:flex;align-items:center;gap:10px;padding-left:6px;cursor:pointer;border-radius:10px;padding:4px 6px 4px 6px}
+.user:hover{background:var(--bg)}
+.avatar{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#7239ea,#b07cff);color:#fff;display:grid;place-items:center;font-weight:700;text-transform:uppercase;overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.user .nm{font-size:13.5px;font-weight:600;line-height:1.1}
+.user .rl{font-size:11.5px;color:var(--muted)}
+.user .chev{width:16px;height:16px;color:var(--muted)}
+.user-dd{min-width:230px}
+.user-dd .uh{padding:14px 16px;border-bottom:1px solid var(--line)}
+.user-dd .uh .un{font-weight:700;font-size:14px}
+.user-dd .uh .ue{font-size:12px;color:var(--muted);margin-top:2px;word-break:break-all}
+.user-dd a{display:flex;align-items:center;gap:11px;padding:11px 16px;font-size:13.5px;font-weight:500;color:var(--ink2);transition:.12s}
+.user-dd a:hover{background:var(--bg);color:var(--ink)}
+.user-dd a .ic{width:18px;height:18px;color:var(--muted)}
+.user-dd a.danger{color:var(--danger)}
+.user-dd a.danger .ic{color:var(--danger)}
+.dd-sep{height:1px;background:var(--line);margin:4px 0}
+.wrap{padding:28px 30px 40px}
+.foot{padding:8px 30px 26px;display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;flex-wrap:wrap;gap:8px;margin-top:auto}
+.foot a{color:var(--ink2);font-weight:500;margin-left:18px}
+.scrim{display:none}
+@media (max-width:992px){
+  .side{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+  body.open .side{transform:none}
+  .main{margin-left:0}
+  .burger{display:grid}
+  .search{display:none}
+  body.open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40}
+}
+@media (max-width:600px){.wrap{padding:18px}.head{padding:0 16px;gap:12px}.user .u-meta,.user .chev{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-device" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 20a5.2 5.2 0 0 0-2-4"/></symbol>
+<symbol id="i-cast" viewBox="0 0 24 24"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6.1A8.4 8.4 0 1 1 21 11.5Z"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8-8M15 5l3 3M18 8l2-2"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.18-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1Z"/></symbol>
+<symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0Zm6 9v5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M21 21v-4M14 21h3"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9M7 6a8 8 0 1 0 10 0"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5"/></symbol>
+<symbol id="i-dn" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+<symbol id="i-wa" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 20 11.5Z"/><path d="M8.5 9.2c.2-.6.4-.6.7-.6h.5c.2 0 .4 0 .6.5l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.1-.2.3-.1.5.3.6 1.2 1.6 2.1 2 .2.1.4.1.5 0l.6-.6c.2-.2.3-.2.5-.1l1.5.8c.2.1.3.3.3.4 0 .8-.7 1.4-1.4 1.5-1.3.1-3-.7-4.2-1.9-1.1-1.1-1.9-2.6-2-3.9 0-.6.2-1 .3-1.3Z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+</defs></svg>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24"><use href="#i-wa"/></svg></div>
+      <div><b>{{ site_name }}</b><small>MULTI&#8209;SESSION</small></div>
+    </div>
+    <nav class="nav">
+      {% for g in menu_groups %}
+      <div class="lbl">{{ g.section }}</div>
+      {% for it in g.items %}
+      <a class="{% if active == it.active_key %}on{% endif %}" href="{{ it.url }}"><svg class="ic"><use href="#i-{{ it.icon }}"/></svg> {{ it.label }}{% if it.badge %} <span class="pill">{{ it.badge }}</span>{% endif %}</a>
+      {% endfor %}
+      {% endfor %}
+    </nav>
+    <div class="plan">
+      <div class="pt">Pro Plan <span>ACTIVE</span></div>
+      <div class="bar"><i></i></div>
+      <p>5 dari 10 sesi terpakai</p>
+      <a class="up" href="/admin/wa/billing">Upgrade plan</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="head">
+      <button class="burger" type="button" onclick="document.body.classList.toggle('open')"><svg class="ic"><use href="#i-list"/></svg></button>
+      <div class="ttl">
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="crumb">{% block page_crumb %}Home <span>•</span> <b>Overview</b>{% endblock %}</div>
+      </div>
+      <div class="search"><svg class="ic" style="width:18px;height:18px"><use href="#i-search"/></svg><input placeholder="Cari nomor, subscriber, log…"></div>
+      <div class="dd-wrap">
+        <button class="iconbtn" id="notifBtn" type="button" aria-label="Notifikasi"><svg class="ic"><use href="#i-bell"/></svg><span class="dot hide" id="notifDot"></span></button>
+        <div class="dd notif-dd" id="notifDd">
+          <div class="dd-h">Notifikasi <button type="button" id="notifClear">Tandai dibaca</button></div>
+          <div class="dd-body" id="notifList"><div class="notif-empty">Belum ada notifikasi</div></div>
+          <div class="dd-foot"><a href="/admin/log-activity">Lihat semua aktivitas</a></div>
+        </div>
+      </div>
+      <a class="btn btn-pri" href="/admin/wa/sessions"><svg class="ic" style="width:18px;height:18px"><use href="#i-plus"/></svg> Hubungkan Nomor</a>
+      <div class="dd-wrap">
+        <div class="user" id="userBtn" role="button" tabindex="0">
+          <div class="avatar">{% if user_avatar and user_avatar != "default.png" %}<img src="/storage/user/avatar/{{ user_avatar }}" alt="">{% else %}{{ user_name | upper | truncate(length=2, end="") }}{% endif %}</div>
+          <div class="u-meta"><div class="nm">{{ user_name }}</div><div class="rl">{{ user_role }}</div></div>
+          <svg class="ic chev"><use href="#i-dn"/></svg>
+        </div>
+        <div class="dd user-dd" id="userDd">
+          <div class="uh"><div class="un">{{ user_name }}</div><div class="ue">{{ user_email }}</div></div>
+          <a href="/admin/my-account"><svg class="ic"><use href="#i-user"/></svg> Akun Saya</a>
+          <a href="/admin/my-profile"><svg class="ic"><use href="#i-grid"/></svg> Profil</a>
+          <a href="/admin/my-security"><svg class="ic"><use href="#i-shield"/></svg> Keamanan</a>
+          <a href="/admin/settings"><svg class="ic"><use href="#i-gear"/></svg> Pengaturan</a>
+          <div class="dd-sep"></div>
+          <a href="/admin/logout" class="danger"><svg class="ic"><use href="#i-logout"/></svg> Keluar</a>
+        </div>
+      </div>
+    </header>
+    {% block content %}{% endblock %}
+    <footer class="foot"><div>© 2026 {{ site_name }} · dibangun dengan Baileys + Rust</div><div><a href="/admin/wa/api-keys">Dokumentasi API</a><a href="/health">Status</a><a href="/admin/log-activity">Dukungan</a></div></footer>
+  </div>
+</div>
+<div class="scrim" onclick="document.body.classList.remove('open')"></div>
+<script>
+// dropdown toggle (notif + user) — exclusive, close on outside click / Esc
+(function(){
+  var dds=[['notifBtn','notifDd'],['userBtn','userDd']].map(function(p){return {btn:document.getElementById(p[0]),dd:document.getElementById(p[1])};}).filter(function(x){return x.btn&&x.dd;});
+  function closeAll(except){dds.forEach(function(x){if(x.dd!==except)x.dd.classList.remove('open');});}
+  dds.forEach(function(x){
+    x.btn.addEventListener('click',function(e){e.stopPropagation();var open=x.dd.classList.contains('open');closeAll();if(!open)x.dd.classList.add('open');});
+    x.btn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();x.btn.click();}});
+    x.dd.addEventListener('click',function(e){e.stopPropagation();});
+  });
+  document.addEventListener('click',function(){closeAll();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll();});
+  var clr=document.getElementById('notifClear');
+  if(clr)clr.addEventListener('click',function(){var d=document.getElementById('notifDot');if(d)d.classList.add('hide');document.querySelectorAll('#notifList .nitem.unread').forEach(function(n){n.classList.remove('unread');});});
+})();
+</script>
+<script>
+// Notifikasi realtime via WebSocket — mengisi dropdown bell secara langsung.
+(function(){
+  var list=document.getElementById('notifList'), dot=document.getElementById('notifDot');
+  if(!list) return;
+  function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
+  function add(n){
+    var e=list.querySelector('.notif-empty'); if(e)e.remove();
+    var el=document.createElement('div'); el.className='nitem unread';
+    el.innerHTML='<div class="nd"><svg class="ic" style="width:17px;height:17px"><use href="#i-bell"/></svg></div>'+
+      '<div><div class="nt">'+esc(n.title||'Notifikasi')+'</div><div class="nm2">'+esc(n.body||'')+(n.ts?(' · '+esc(n.ts)):'')+'</div></div>';
+    list.insertBefore(el, list.firstChild);
+    while(list.querySelectorAll('.nitem').length>15){ list.removeChild(list.lastChild); }
+    if(dot)dot.classList.remove('hide');
+  }
+  var ws, tries=0;
+  function connect(){
+    try{
+      var proto=location.protocol==='https:'?'wss':'ws';
+      ws=new WebSocket(proto+'://'+location.host+'/admin/ws/notifications');
+      ws.onopen=function(){tries=0;};
+      ws.onmessage=function(ev){ try{ var n=JSON.parse(ev.data); if(n.kind==='wa'){ window.dispatchEvent(new CustomEvent('wa-event',{detail:n})); return; } add(n); }catch(_){ add({title:ev.data}); } };
+      ws.onclose=function(){ tries++; if(tries<30) setTimeout(connect, Math.min(1000*tries,8000)); };
+      ws.onerror=function(){ try{ws.close();}catch(_){} };
+    }catch(_){}
+  }
+  connect();
+})();
+</script>
+<div id="waToast" style="position:fixed;top:18px;right:18px;z-index:300;display:flex;flex-direction:column;gap:8px"></div>
+<script>
+(function(){
+  function toast(msg,kind){ if(!msg)return; var c=document.getElementById('waToast'); var el=document.createElement('div');
+    el.textContent=msg; el.style.cssText='background:'+(kind==='error'?'#f1416c':kind==='success'?'#15a85b':kind==='warning'?'#f6a609':'#1e1e2b')+';color:#fff;padding:12px 16px;border-radius:10px;font-size:13.5px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:340px';
+    c.appendChild(el); setTimeout(function(){el.style.transition='.4s';el.style.opacity='0';setTimeout(function(){el.remove();},400);},4500); }
+  {% if flash_error %}toast("{{ flash_error }}","error");{% endif %}
+  {% if flash_success %}toast("{{ flash_success }}","success");{% endif %}
+  {% if flash_warning %}toast("{{ flash_warning }}","warning");{% endif %}
+  {% if flash_info %}toast("{{ flash_info }}","info");{% endif %}
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

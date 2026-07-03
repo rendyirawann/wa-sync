@@ -1,0 +1,82 @@
+{% extends "layout/wa.html" %}
+{% block title %}Master Plan{% endblock %}
+{% block page_title %}Master Plan{% endblock %}
+{% block page_crumb %}Sistem <span>•</span> <b>Paket Langganan</b>{% endblock %}
+
+{% block style %}
+.intro{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:18px 22px;margin-bottom:18px}
+.intro h2{font-size:16px;font-weight:800}
+.intro p{font-size:13px;color:var(--muted);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.pcard{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;border:1px solid var(--line)}
+.pcard .top{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.pcard .top h3{font-size:17px;font-weight:800}
+.code{display:inline-block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--ink2);background:var(--bg);padding:3px 9px;border-radius:6px;margin-top:5px}
+.subs{font-size:12px;color:var(--muted);text-align:right}
+.subs b{display:block;font-size:20px;color:var(--ink);font-weight:800}
+.pcard form{padding:18px 20px}
+.fld{margin-bottom:13px}
+.fld label{display:block;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.fld .pre{position:relative}
+.fld .pre .rp{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);font-weight:600}
+.fld .pre input{padding-left:34px}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+.inp:focus{border-color:var(--primary)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.toggles{display:flex;flex-direction:column;gap:9px;margin:4px 0 14px}
+.chk{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:500;cursor:pointer}
+.chk input{width:17px;height:17px;accent-color:var(--primary)}
+.pfoot{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding-top:14px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:-7px;margin-bottom:13px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="intro">
+    <h2>Master Data Paket Langganan</h2>
+    <p>Atur harga, batas jumlah nomor, batas pesan per hari, dan fitur (AI &amp; Webhook) untuk tiap paket. Perubahan langsung berlaku ke semua subscriber pada paket tersebut.</p>
+  </div>
+
+  <div class="grid">
+    {% for p in plans %}
+    <div class="pcard">
+      <div class="top">
+        <div>
+          <h3>{{ p.name }}</h3>
+          <span class="code">{{ p.code }}</span>
+        </div>
+        <div class="subs"><b>{{ p.subscribers }}</b> subscriber</div>
+      </div>
+      <form method="post" action="/admin/plans/{{ p.id }}">
+        <input type="hidden" name="_token" value="{{ csrf_token }}">
+        <div class="fld">
+          <label>Nama paket</label>
+          <input name="name" class="inp" value="{{ p.name }}" maxlength="60" required>
+        </div>
+        <div class="fld">
+          <label>Harga / bulan</label>
+          <div class="pre"><span class="rp">Rp</span><input name="price_idr" class="inp" value="{{ p.price_idr }}" inputmode="numeric"></div>
+        </div>
+        <p class="hint">Kosong / 0 = gratis. Tampilan: Rp {{ p.price_fmt }}.</p>
+        <div class="row2">
+          <div class="fld">
+            <label>Maks nomor</label>
+            <input name="max_sessions" class="inp" value="{{ p.max_sessions }}" inputmode="numeric">
+          </div>
+          <div class="fld">
+            <label>Maks pesan / hari</label>
+            <input name="max_messages_per_day" class="inp" value="{{ p.max_messages_per_day }}" inputmode="numeric">
+          </div>
+        </div>
+        <div class="toggles">
+          <label class="chk"><input type="checkbox" name="ai_enabled" value="on" {% if p.ai_enabled %}checked{% endif %}> Fitur AI Chatbot</label>
+          <label class="chk"><input type="checkbox" name="webhook_enabled" value="on" {% if p.webhook_enabled %}checked{% endif %}> Fitur Webhook keluar</label>
+          <label class="chk"><input type="checkbox" name="is_active" value="on" {% if p.is_active %}checked{% endif %}> Paket aktif (bisa dipilih)</label>
+        </div>
+        <div class="pfoot"><button type="submit" class="btn btn-pri">Simpan Perubahan</button></div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

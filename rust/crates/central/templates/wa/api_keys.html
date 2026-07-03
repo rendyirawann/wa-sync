@@ -1,0 +1,111 @@
+{% extends "layout/wa.html" %}
+{% block title %}API Keys{% endblock %}
+{% block page_title %}API Keys{% endblock %}
+{% block page_crumb %}Developer <span>•</span> <b>API Keys</b>{% endblock %}
+
+{% block style %}
+.akcard{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:22px;margin-bottom:18px}
+.akcard h3{font-size:15.5px;font-weight:700;margin-bottom:4px}
+.akcard .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.keyrow{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:9px;padding:11px 14px;margin-top:8px}
+.keyrow .lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;width:90px;flex:none}
+.keyrow code{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy{background:var(--primary-soft);color:var(--primary);border:none;border-radius:7px;padding:7px 12px;font-weight:600;font-size:12px;cursor:pointer;flex:none}
+.copy:hover{background:#d9f3e4}
+.num{border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px}
+.num .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.num .nm{font-weight:700}.num .ph{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted)}
+.pill{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px}
+.pill.connected{color:var(--primary);background:var(--primary-soft)}
+.pill.qr,.pill.connecting,.pill.pending{color:#b9790a;background:var(--warn-soft)}
+.pill.disconnected,.pill.logged_out{color:var(--danger);background:var(--danger-soft)}
+.pill.banned{color:var(--ink2);background:#eef0f4}
+.toggle{margin-top:12px;background:none;border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-weight:600;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.snip{display:none;margin-top:12px}
+.snip.open{display:block}
+.snip .tabs{display:flex;gap:6px;margin-bottom:8px}
+.snip .tabs button{font-size:12px;font-weight:600;padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--ink2)}
+.snip .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.snip pre{position:relative;background:#15151f;color:#e8e9f0;border-radius:10px;padding:16px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.55;margin:0}
+.snip pre .copy{position:absolute;top:10px;right:10px}
+.snip .pane{display:none}.snip .pane.on{display:block}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="akcard">
+    <h3>App Key (kunci akun)</h3>
+    <div class="sub">Satu app_key untuk akun Anda. Dipakai bersama <b>auth_key tiap nomor</b> untuk kirim pesan via API.</div>
+    <div class="keyrow"><span class="lbl">App Key</span><code id="appkey">{{ app_key }}</code><button class="copy" data-copy="appkey">Salin</button></div>
+  </div>
+
+  <div class="akcard">
+    <h3>Nomor &amp; Auth Key</h3>
+    <div class="sub">Tiap nomor punya auth_key sendiri. Endpoint: <code>POST {{ api_base }}/api/create-message</code></div>
+    {% for n in api_numbers %}
+    <div class="num">
+      <div class="top">
+        <div><span class="nm">{{ n.label }}</span> <span class="ph">{% if n.phone %}+{{ n.phone }}{% else %}belum tersambung{% endif %}</span></div>
+        <span class="pill {{ n.status }}">{{ n.status }}</span>
+      </div>
+      <div class="keyrow"><span class="lbl">Auth Key</span><code id="ak-{{ n.id }}">{{ n.auth_key }}</code><button class="copy" data-copy="ak-{{ n.id }}">Salin</button></div>
+      <button class="toggle" data-toggle="snip-{{ n.id }}">&lt;/&gt; Lihat contoh kode (cURL / PHP)</button>
+      <div class="snip" id="snip-{{ n.id }}">
+        <div class="tabs"><button class="on" data-tab="curl-{{ n.id }}">cURL</button><button data-tab="php-{{ n.id }}">PHP</button></div>
+        <div class="pane on" id="curl-{{ n.id }}">
+<pre><button class="copy" data-copy="curlcode-{{ n.id }}">Salin</button><code id="curlcode-{{ n.id }}">curl -X POST {{ api_base }}/api/create-message \
+  -F "appkey={{ app_key }}" \
+  -F "authkey={{ n.auth_key }}" \
+  -F "to=6281234567890" \
+  -F "message=Halo dari API"</code></pre>
+          <div class="sub" style="margin:10px 0 4px">Kirim media (gambar/dokumen/video) via URL:</div>
+<pre><button class="copy" data-copy="mediacode-{{ n.id }}">Salin</button><code id="mediacode-{{ n.id }}">curl -X POST {{ api_base }}/api/create-message-media \
+  -F "appkey={{ app_key }}" \
+  -F "authkey={{ n.auth_key }}" \
+  -F "to=6281234567890" \
+  -F "media=https://contoh.com/gambar.jpg" \
+  -F "type=image" \
+  -F "message=Caption opsional"</code></pre>
+        </div>
+        <div class="pane" id="php-{{ n.id }}">
+<pre><button class="copy" data-copy="phpcode-{{ n.id }}">Salin</button><code id="phpcode-{{ n.id }}">$curl = curl_init();
+curl_setopt_array($curl, array(
+    CURLOPT_URL => '{{ api_base }}/api/create-message',
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CUSTOMREQUEST => 'POST',
+    CURLOPT_POSTFIELDS => array(
+        'appkey'  => '{{ app_key }}',
+        'authkey' => '{{ n.auth_key }}',
+        'to'      => $receiverNumber,
+        'message' => $message,
+        'sandbox' => 'false'
+    ),
+));
+$response = curl_exec($curl);
+curl_close($curl);
+echo $response;</code></pre>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if api_numbers | length == 0 %}<div class="empty">Belum ada nomor. <a href="/admin/wa/sessions" style="color:var(--primary);font-weight:600">Tautkan nomor →</a> lalu auth_key & contoh kode muncul di sini.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  function flash(btn){ var o=btn.textContent; btn.textContent='Tersalin!'; setTimeout(function(){btn.textContent=o;},1400); }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('[data-copy]');
+    if(b){ var el=document.getElementById(b.getAttribute('data-copy')); if(el){ var txt=el.innerText||el.textContent; navigator.clipboard.writeText(txt).then(function(){flash(b);}).catch(function(){ var r=document.createRange();r.selectNode(el);window.getSelection().removeAllRanges();window.getSelection().addRange(r);try{document.execCommand('copy');flash(b);}catch(_){}}); } return; }
+    var t=e.target.closest('[data-toggle]');
+    if(t){ document.getElementById(t.getAttribute('data-toggle')).classList.toggle('open'); return; }
+    var tab=e.target.closest('[data-tab]');
+    if(tab){ var snip=tab.closest('.snip'); snip.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('on');}); tab.classList.add('on'); snip.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');}); document.getElementById(tab.getAttribute('data-tab')).classList.add('on'); return; }
+  });
+})();
+</script>
+{% endblock %}

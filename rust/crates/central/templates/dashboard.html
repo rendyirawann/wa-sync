@@ -1,0 +1,182 @@
+{% extends "layout/wa.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_crumb %}Home <span>•</span> <b>Overview</b>{% endblock %}
+
+{% block style %}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.stat{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px}
+.stat .top{display:flex;align-items:center;justify-content:space-between}
+.stat .ico{width:46px;height:46px;border-radius:11px;display:grid;place-items:center}
+.stat .ico.g{background:var(--primary-soft);color:var(--primary)}
+.stat .ico.p{background:var(--info-soft);color:var(--info)}
+.stat .ico.b{background:#e9f2ff;color:#2f7bf6}
+.stat .ico.o{background:var(--warn-soft);color:var(--warn)}
+.stat .chg{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:3px;padding:4px 8px;border-radius:7px}
+.chg.up{color:var(--primary);background:var(--primary-soft)}
+.chg.dn{color:var(--danger);background:var(--danger-soft)}
+.stat .num{font-size:29px;font-weight:800;letter-spacing:-.02em;margin-top:16px;font-variant-numeric:tabular-nums}
+.stat .num small{font-size:16px;color:var(--muted);font-weight:600}
+.stat .cap{color:var(--muted);font-size:12.5px;margin-top:3px;font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:20px;margin-top:20px}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:500}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:9px}
+.tabs button{font-size:12.5px;font-weight:600;color:var(--ink2);padding:6px 13px;border-radius:7px}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh2)}
+.chart{padding:14px 14px 8px}
+.chart svg{width:100%;height:230px;display:block}
+.chart .xl{display:flex;justify-content:space-between;padding:6px 10px 6px;color:var(--muted);font-size:11.5px;font-weight:500}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:13px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:15px 22px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+.numrow{display:flex;align-items:center;gap:12px}
+.flag{width:38px;height:38px;border-radius:9px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.numrow .n b{font-weight:600;display:block}
+.numrow .n .s{font-size:12px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px}
+.badge.ok,.badge.connected{color:var(--primary);background:var(--primary-soft)}
+.badge.warn,.badge.qr,.badge.connecting,.badge.pending{color:#b9790a;background:var(--warn-soft)}
+.badge.off,.badge.disconnected,.badge.logged_out{color:var(--danger);background:var(--danger-soft)}
+.badge.ban,.badge.banned{color:var(--ink2);background:#eef0f4}
+.badge .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.ok .d{animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+.acts{display:flex;gap:6px}
+.acts button{width:34px;height:34px;border-radius:8px;background:var(--bg);color:var(--ink2);display:grid;place-items:center;transition:.15s}
+.acts button:hover{background:#e9ecf2;color:var(--ink)}
+.acts button.red:hover{background:var(--danger-soft);color:var(--danger)}
+.qr-card{padding:22px;text-align:center}
+.qr-box{position:relative;width:200px;height:200px;margin:6px auto 16px;border-radius:14px;background:#fff;border:1px solid var(--line);padding:14px;box-shadow:var(--sh2)}
+.qr-box svg{width:100%;height:100%;display:block}
+.qr-wm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:9px;background:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.qr-wm svg{width:24px;height:24px;stroke:var(--wa);fill:none;stroke-width:2}
+.qr-card h3{font-size:16px;font-weight:700}
+.steps{text-align:left;margin:14px 0 16px;display:flex;flex-direction:column;gap:10px}
+.steps li{display:flex;gap:11px;align-items:flex-start;font-size:13px;color:var(--ink2);list-style:none}
+.steps .k{width:22px;height:22px;border-radius:50%;background:var(--primary-soft);color:var(--primary);font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none;margin-top:1px}
+.qr-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.exp{font-size:12.5px;color:var(--muted);font-weight:500}
+.exp b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn-soft{display:inline-flex;align-items:center;gap:7px;background:var(--primary-soft);color:var(--primary);font-weight:600;font-size:13px;padding:9px 14px;border-radius:9px}
+.btn-soft:hover{background:#d9f3e4}
+.feed{padding:8px 22px 18px}
+.feed .it{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--line)}
+.feed .it:last-child{border-bottom:none}
+.feed .dotc{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none}
+.dotc.g{background:var(--primary-soft);color:var(--primary)}
+.dotc.r{background:var(--danger-soft);color:var(--danger)}
+.dotc.b{background:#e9f2ff;color:#2f7bf6}
+.dotc.o{background:var(--warn-soft);color:var(--warn)}
+.feed .it .tx{font-size:13px;color:var(--ink)}
+.feed .it .tx b{font-weight:600}
+.feed .it .tm{font-size:11.5px;color:var(--muted);margin-top:2px}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.stats{grid-template-columns:1fr}}
+.hello{display:flex;align-items:center;justify-content:space-between;gap:16px;background:linear-gradient(120deg,#15151f,#1e1e2b);color:#fff;border-radius:14px;padding:22px 24px;margin-bottom:20px;flex-wrap:wrap}
+.hello h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.hello p{color:#b9bccb;font-size:13.5px;margin-top:4px;max-width:560px}
+.hello p b{color:var(--wa)}
+.hello-admin{display:flex;gap:10px;flex-wrap:wrap}
+.hello-admin a{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);color:#fff;font-weight:600;font-size:13px;padding:10px 15px;border-radius:9px;transition:.15s}
+.hello-admin a:hover{background:rgba(37,211,102,.22)}
+.hello-admin a .ic{color:var(--wa)}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="hello">
+    <div>
+      <h2>Halo, {{ user_name }} 👋</h2>
+      <p>{% if can_view_resources %}Anda login sebagai <b>{{ user_role }}</b> — akses penuh manajemen sistem &amp; seluruh sesi WhatsApp.{% else %}Selamat datang di panel layanan WhatsApp Anda — pantau sesi, kontak, dan broadcast Anda di sini.{% endif %}</p>
+    </div>
+    {% if can_view_resources %}
+    <div class="hello-admin">
+      <a href="/admin/users"><svg class="ic" style="width:16px;height:16px"><use href="#i-user"/></svg> Users</a>
+      <a href="/admin/roles"><svg class="ic" style="width:16px;height:16px"><use href="#i-shield"/></svg> Roles</a>
+      <a href="/admin/settings"><svg class="ic" style="width:16px;height:16px"><use href="#i-gear"/></svg> Settings</a>
+    </div>
+    {% endif %}
+  </div>
+  <section class="stats">
+    <div class="stat"><div class="top"><div class="ico g"><svg class="ic"><use href="#i-device"/></svg></div></div><div class="num">{{ sess_conn }} <small>/ {{ sess_total }}</small></div><div class="cap">Sesi terhubung</div></div>
+    <div class="stat"><div class="top"><div class="ico p"><svg class="ic"><use href="#i-users"/></svg></div></div><div class="num">{{ contacts }}</div><div class="cap">{% if can_view_resources %}Total subscriber{% else %}Kontak{% endif %}</div></div>
+    <div class="stat"><div class="top"><div class="ico b"><svg class="ic"><use href="#i-send"/></svg></div></div><div class="num">{{ msg_out }}</div><div class="cap">Pesan terkirim (30 hari)</div></div>
+    <div class="stat"><div class="top"><div class="ico o"><svg class="ic"><use href="#i-chat"/></svg></div></div><div class="num">{{ msg_in }}</div><div class="cap">Pesan diterima (30 hari)</div></div>
+  </section>
+  <div class="grid">
+    <div class="col">
+      <div class="panel">
+        <div class="ph"><div><h3>Lalu lintas pesan</h3><div class="sub">Terkirim vs diterima · 14 hari terakhir</div></div><div class="tabs"><button>Hari</button><button class="on">Minggu</button><button>Bulan</button></div></div>
+        <div class="chart">
+          <svg viewBox="0 0 720 230" preserveAspectRatio="none">
+            <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#25d366" stop-opacity=".28"/><stop offset="1" stop-color="#25d366" stop-opacity="0"/></linearGradient><linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7239ea" stop-opacity=".16"/><stop offset="1" stop-color="#7239ea" stop-opacity="0"/></linearGradient></defs>
+            <g stroke="#eef0f4" stroke-width="1"><line x1="0" y1="40" x2="720" y2="40"/><line x1="0" y1="95" x2="720" y2="95"/><line x1="0" y1="150" x2="720" y2="150"/><line x1="0" y1="205" x2="720" y2="205"/></g>
+            <path d="M0,150 C60,130 90,90 150,100 C210,110 240,60 300,70 C360,80 390,40 450,55 C510,68 540,90 600,72 C660,56 690,80 720,68 L720,230 L0,230 Z" fill="url(#gb)"/>
+            <path d="M0,150 C60,130 90,90 150,100 C210,110 240,60 300,70 C360,80 390,40 450,55 C510,68 540,90 600,72 C660,56 690,80 720,68" fill="none" stroke="#7239ea" stroke-width="2.5" opacity=".5"/>
+            <path d="M0,180 C60,170 90,150 150,158 C210,166 240,120 300,128 C360,136 390,100 450,112 C510,124 540,140 600,120 C660,100 690,118 720,104 L720,230 L0,230 Z" fill="url(#ga)"/>
+            <path d="M0,180 C60,170 90,150 150,158 C210,166 240,120 300,128 C360,136 390,100 450,112 C510,124 540,140 600,120 C660,100 690,118 720,104" fill="none" stroke="#25d366" stroke-width="3"/>
+            <circle cx="450" cy="112" r="5" fill="#fff" stroke="#25d366" stroke-width="3"/>
+          </svg>
+          <div class="xl"><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div><h3>Sesi WhatsApp</h3><div class="sub">Perangkat yang terhubung lewat Baileys</div></div><a class="btn-soft" href="/admin/wa/sessions"><svg class="ic" style="width:16px;height:16px"><use href="#i-plus"/></svg> Tambah sesi</a></div>
+        <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Sesi</th><th>Nomor</th><th>Status</th><th>Terakhir aktif</th></tr></thead>
+          <tbody>
+            {% for s in dash_sessions %}
+            <tr>
+              <td><div class="numrow"><div class="flag">{% if s.phone %}ID{% else %}··{% endif %}</div><div class="n"><b>{{ s.label }}</b></div></div></td>
+              <td class="mono">{% if s.phone %}+{{ s.phone }}{% else %}—{% endif %}</td>
+              <td><span class="badge {{ s.status }}"><span class="d"></span>{{ s.status }}</span></td>
+              <td>{{ s.last }}</td>
+            </tr>
+            {% endfor %}
+            {% if dash_sessions | length == 0 %}<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">Belum ada sesi. <a href="/admin/wa/sessions" style="color:var(--primary);font-weight:600">Hubungkan nomor →</a></td></tr>{% endif %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel qr-card">
+        <div class="qr-box"><svg id="qr" viewBox="0 0 100 100"></svg><div class="qr-wm"><svg viewBox="0 0 24 24"><use href="#i-wa"/></svg></div></div>
+        <h3>Hubungkan perangkat</h3>
+        <ul class="steps">
+          <li><span class="k">1</span> Buka WhatsApp di HP subscriber</li>
+          <li><span class="k">2</span> Ketuk <b>Perangkat Tertaut → Tautkan Perangkat</b></li>
+          <li><span class="k">3</span> Arahkan kamera ke kode QR ini</li>
+        </ul>
+        <div class="qr-foot"><span class="exp">Kedaluwarsa <b id="exp">0:48</b></span><button class="btn-soft" id="refreshQr"><svg class="ic" style="width:16px;height:16px"><use href="#i-refresh"/></svg> Segarkan QR</button></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div><h3>Aktivitas terbaru</h3></div><button class="iconbtn" style="width:34px;height:34px"><svg class="ic" style="width:18px;height:18px"><use href="#i-more"/></svg></button></div>
+        <div class="feed">
+          {% for a in dash_activity %}
+          <div class="it"><div class="dotc {% if a.direction == 'in' %}b{% else %}g{% endif %}"><svg class="ic" style="width:17px;height:17px"><use href="{% if a.direction == 'in' %}#i-chat{% else %}#i-send{% endif %}"/></svg></div><div><div class="tx">{% if a.direction == 'in' %}Masuk dari{% else %}Terkirim ke{% endif %} <b class="mono">+{{ a.jid }}</b>: {{ a.body | truncate(length=42) }}</div><div class="tm">{{ a.when }}</div></div></div>
+          {% endfor %}
+          {% if dash_activity | length == 0 %}<div style="padding:26px;text-align:center;color:var(--muted);font-size:13px">Belum ada aktivitas pesan.</div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function drawQR(){var N=25,cell=100/N,svg=document.getElementById('qr'),s='';function finder(x,y){s+='<rect x="'+(x*cell)+'" y="'+(y*cell)+'" width="'+(7*cell)+'" height="'+(7*cell)+'" rx="'+cell+'" fill="#111"/>';s+='<rect x="'+((x+1)*cell)+'" y="'+((y+1)*cell)+'" width="'+(5*cell)+'" height="'+(5*cell)+'" rx="'+(cell*.7)+'" fill="#fff"/>';s+='<rect x="'+((x+2)*cell)+'" y="'+((y+2)*cell)+'" width="'+(3*cell)+'" height="'+(3*cell)+'" rx="'+(cell*.5)+'" fill="#111"/>';}function inFinder(c,r){return (c<8&&r<8)||(c>N-9&&r<8)||(c<8&&r>N-9);}for(var r=0;r<N;r++)for(var c=0;c<N;c++){if(inFinder(c,r))continue;if((r*7+c*3+r*c)%5>2)s+='<rect x="'+(c*cell)+'" y="'+(r*cell)+'" width="'+cell+'" height="'+cell+'" rx="'+(cell*.25)+'" fill="#111"/>';}finder(0,0);finder(N-7,0);finder(0,N-7);svg.innerHTML=s;}
+drawQR();
+var t=48;function fmt(n){var m=Math.floor(n/60),s=n%60;return m+':'+(s<10?'0':'')+s;}
+setInterval(function(){t--;if(t<0){t=48;drawQR();}var e=document.getElementById('exp');if(e)e.textContent=fmt(t);},1000);
+var rq=document.getElementById('refreshQr');if(rq)rq.addEventListener('click',function(){drawQR();t=48;document.getElementById('exp').textContent=fmt(t);});
+</script>
+{% endblock %}

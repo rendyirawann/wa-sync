@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token }}">
+<title>{% block title %}Admin{% endblock %} · {{ site_name }}</title>
+<link rel="shortcut icon" href="/assets/media/logos/{{ site_logo }}" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Metronic vendor (untuk konten: DataTables, kartu, modal, form) -->
+<link href="/assets/plugins/custom/datatables/datatables.bundle.css" rel="stylesheet" type="text/css" />
+<link href="/assets/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css" />
+<link href="/assets/css/style.bundle.css" rel="stylesheet" type="text/css" />
+<style>
+/* ===== Shell custom (prefiks ad- agar tidak bentrok dgn Bootstrap/Metronic) ===== */
+:root{
+  --ad-bg:#f4f6fa; --ad-card:#fff; --ad-ink:#1a1a27; --ad-ink2:#4b5260; --ad-muted:#9ca3b4; --ad-line:#eef0f4;
+  --ad-wa:#25d366; --ad-primary:#15a85b; --ad-primary2:#0e8a4a; --ad-primary-soft:#e7f8ee; --ad-danger:#f1416c;
+  --ad-side:#15151f; --ad-side2:#1e1e2b; --ad-side-tx:#9a9cb0; --ad-side-label:#5b5d72;
+}
+.ad-app *{box-sizing:border-box}
+.ad-ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ad-app{display:flex;min-height:100vh;background:var(--ad-bg);font-family:'Inter',system-ui,sans-serif}
+.ad-side{width:266px;background:var(--ad-side);color:var(--ad-side-tx);flex:none;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:100}
+.ad-main{margin-left:266px;flex:1;min-width:0;display:flex;flex-direction:column;width:calc(100% - 266px)}
+.ad-brand{display:flex;align-items:center;gap:12px;padding:22px 22px 20px}
+.ad-brand .ad-logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--ad-wa),#10a85b);display:grid;place-items:center;box-shadow:0 6px 16px rgba(37,211,102,.35)}
+.ad-brand .ad-logo svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2}
+.ad-brand b{color:#fff;font-size:16px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.1}
+.ad-brand small{color:var(--ad-side-label);font-size:10px;letter-spacing:.18em;font-weight:600}
+.ad-nav{padding:6px 14px;overflow-y:auto;flex:1}
+.ad-nav .ad-lbl{color:var(--ad-side-label);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:18px 12px 8px}
+.ad-nav a{display:flex;align-items:center;gap:13px;padding:10px 12px;border-radius:9px;color:var(--ad-side-tx);font-weight:500;font-size:13.5px;margin:2px 0;transition:.15s}
+.ad-nav a:hover{background:var(--ad-side2);color:#e8e9f0}
+.ad-nav a.on{background:rgba(37,211,102,.12);color:#fff}
+.ad-nav a.on .ad-ic{color:var(--ad-wa)}
+.ad-nav a .ad-ic{color:#6e7088}
+.ad-nav a .ad-pill{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.08);color:#c7c9d6;padding:2px 8px;border-radius:20px}
+.ad-plan{margin:14px;padding:16px;border-radius:12px;background:linear-gradient(160deg,#23232f,#1a1a25);border:1px solid rgba(255,255,255,.05)}
+.ad-plan .ad-pt{display:flex;align-items:center;justify-content:space-between;color:#fff;font-weight:600;font-size:13px}
+.ad-plan .ad-pt span{font-size:10px;font-weight:700;letter-spacing:.08em;color:#05130b;background:var(--ad-wa);padding:3px 8px;border-radius:6px}
+.ad-plan .ad-bar{height:7px;border-radius:6px;background:rgba(255,255,255,.1);margin:12px 0 8px;overflow:hidden}
+.ad-plan .ad-bar i{display:block;height:100%;width:50%;border-radius:6px;background:linear-gradient(90deg,var(--ad-wa),#10a85b)}
+.ad-plan p{color:var(--ad-side-tx);font-size:12px}
+.ad-plan a.ad-up{display:block;text-align:center;margin-top:12px;background:#fff;color:#15151f;font-weight:600;font-size:12.5px;padding:9px;border-radius:8px}
+.ad-head{background:var(--ad-card);border-bottom:1px solid var(--ad-line);padding:0 30px;height:74px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:60}
+.ad-burger{display:none;background:var(--ad-bg);border-radius:8px;padding:8px;border:none;cursor:pointer}
+.ad-ttl h1{font-size:19px;font-weight:700;letter-spacing:-.01em;color:var(--ad-ink);margin:0}
+.ad-ttl .ad-crumb{font-size:12.5px;color:var(--ad-muted);display:flex;gap:7px;align-items:center;margin-top:2px}
+.ad-ttl .ad-crumb b{color:var(--ad-ink2);font-weight:500}
+.ad-search{margin-left:auto;display:flex;align-items:center;gap:9px;background:var(--ad-bg);border-radius:9px;padding:9px 14px;width:240px;color:var(--ad-muted)}
+.ad-search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;color:var(--ad-ink);width:100%}
+.ad-iconbtn{position:relative;width:42px;height:42px;border-radius:10px;background:var(--ad-bg);display:grid;place-items:center;color:var(--ad-ink2);border:none;cursor:pointer}
+.ad-iconbtn:hover{background:#e9ecf2}
+.ad-iconbtn .ad-dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--ad-danger);border:2px solid var(--ad-card)}
+.ad-iconbtn .ad-dot.ad-hide{display:none}
+.ad-btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;transition:.15s;text-decoration:none;border:none;cursor:pointer}
+.ad-btn-pri{background:var(--ad-primary);color:#fff;box-shadow:0 8px 20px rgba(21,168,91,.28)}
+.ad-btn-pri:hover{background:var(--ad-primary2);color:#fff}
+.ad-ddw{position:relative}
+.ad-dd{position:absolute;top:calc(100% + 10px);right:0;background:var(--ad-card);border:1px solid var(--ad-line);border-radius:12px;box-shadow:0 12px 40px rgba(20,25,50,.14);min-width:300px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:.16s;z-index:70;overflow:hidden}
+.ad-dd.open{opacity:1;visibility:visible;transform:none}
+.ad-dd-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--ad-line);font-weight:700;font-size:13.5px;color:var(--ad-ink)}
+.ad-dd-h button{font-size:12px;font-weight:600;color:var(--ad-primary);background:none;border:none;cursor:pointer}
+.ad-dd-body{max-height:340px;overflow-y:auto}
+.ad-notif-empty{padding:34px 16px;text-align:center;color:var(--ad-muted);font-size:13px}
+.ad-nitem{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--ad-line)}
+.ad-nitem:last-child{border-bottom:none}
+.ad-nitem.unread{background:var(--ad-primary-soft)}
+.ad-nitem .ad-nd{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--ad-primary-soft);color:var(--ad-primary)}
+.ad-nitem .ad-nt{font-size:13px;color:var(--ad-ink);line-height:1.35}
+.ad-nitem .ad-nm2{font-size:11.5px;color:var(--ad-muted);margin-top:2px}
+.ad-dd-foot{padding:11px 16px;text-align:center;border-top:1px solid var(--ad-line)}
+.ad-dd-foot a{font-size:12.5px;font-weight:600;color:var(--ad-primary);text-decoration:none}
+.ad-user{display:flex;align-items:center;gap:10px;cursor:pointer;border-radius:10px;padding:4px 6px}
+.ad-user:hover{background:var(--ad-bg)}
+.ad-avatar{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#7239ea,#b07cff);color:#fff;display:grid;place-items:center;font-weight:700;text-transform:uppercase;overflow:hidden;flex:none}
+.ad-avatar img{width:100%;height:100%;object-fit:cover}
+.ad-user .ad-nm{font-size:13.5px;font-weight:600;line-height:1.1;color:var(--ad-ink)}
+.ad-user .ad-rl{font-size:11.5px;color:var(--ad-muted)}
+.ad-user .ad-chev{width:16px;height:16px;color:var(--ad-muted)}
+.ad-user-dd{min-width:230px}
+.ad-user-dd .ad-uh{padding:14px 16px;border-bottom:1px solid var(--ad-line)}
+.ad-user-dd .ad-uh .ad-un{font-weight:700;font-size:14px;color:var(--ad-ink)}
+.ad-user-dd .ad-uh .ad-ue{font-size:12px;color:var(--ad-muted);margin-top:2px;word-break:break-all}
+.ad-user-dd a{display:flex;align-items:center;gap:11px;padding:11px 16px;font-size:13.5px;font-weight:500;color:var(--ad-ink2);text-decoration:none}
+.ad-user-dd a:hover{background:var(--ad-bg);color:var(--ad-ink)}
+.ad-user-dd a .ad-ic{width:18px;height:18px;color:var(--ad-muted)}
+.ad-user-dd a.ad-danger{color:var(--ad-danger)}
+.ad-sep{height:1px;background:var(--ad-line);margin:4px 0}
+.ad-content{padding:26px 30px 10px;flex:1}
+.ad-foot{padding:14px 30px 26px;display:flex;justify-content:space-between;color:var(--ad-muted);font-size:12.5px;flex-wrap:wrap;gap:8px}
+.ad-foot a{color:var(--ad-ink2);font-weight:500;margin-left:18px;text-decoration:none}
+.ad-scrim{display:none}
+@media (max-width:992px){
+  .ad-side{transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+  body.ad-open .ad-side{transform:none}
+  .ad-main{margin-left:0;width:100%}
+  .ad-burger{display:grid}
+  .ad-search{display:none}
+  body.ad-open .ad-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+}
+@media (max-width:600px){.ad-content{padding:16px}.ad-head{padding:0 16px;gap:12px}.ad-user .ad-meta,.ad-user .ad-chev{display:none}}
+
+/* ===== Brand hijau utk komponen Metronic di area konten ===== */
+body{font-family:'Inter',sans-serif !important}
+.btn.btn-primary{background-color:#15a85b !important;border-color:#15a85b !important;--bs-btn-bg:#15a85b;--bs-btn-border-color:#15a85b;--bs-btn-hover-bg:#0e8a4a;--bs-btn-hover-border-color:#0e8a4a;--bs-btn-active-bg:#0e8a4a}
+.btn.btn-light-primary{background-color:#e7f8ee !important;color:#15a85b !important}
+.text-primary{color:#15a85b !important}.bg-primary{background-color:#15a85b !important}
+.bg-light-primary{background-color:#e7f8ee !important}.badge-light-primary{background-color:#e7f8ee !important;color:#15a85b !important}
+.text-hover-primary:hover{color:#15a85b !important}
+{% block stylesheets %}{% endblock %}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="ai-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="ai-device" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+<symbol id="ai-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6M17.5 20a5.2 5.2 0 0 0-2-4"/></symbol>
+<symbol id="ai-cast" viewBox="0 0 24 24"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></symbol>
+<symbol id="ai-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6.1A8.4 8.4 0 1 1 21 11.5Z"/></symbol>
+<symbol id="ai-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8-8M15 5l3 3M18 8l2-2"/></symbol>
+<symbol id="ai-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="ai-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></symbol>
+<symbol id="ai-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.18-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.31.22.65.22 1Z"/></symbol>
+<symbol id="ai-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0Zm6 9v5"/></symbol>
+<symbol id="ai-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="ai-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="ai-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ai-dn" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+<symbol id="ai-wa" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 20 11.5Z"/><path d="M8.5 9.2c.2-.6.4-.6.7-.6h.5c.2 0 .4 0 .6.5l.7 1.6c.1.2 0 .4-.1.5l-.5.6c-.1.1-.2.3-.1.5.3.6 1.2 1.6 2.1 2 .2.1.4.1.5 0l.6-.6c.2-.2.3-.2.5-.1l1.5.8c.2.1.3.3.3.4 0 .8-.7 1.4-1.4 1.5-1.3.1-3-.7-4.2-1.9-1.1-1.1-1.9-2.6-2-3.9 0-.6.2-1 .3-1.3Z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="ai-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="ai-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/></symbol>
+<symbol id="ai-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+</defs></svg>
+<div class="ad-app">
+  <aside class="ad-side">
+    <div class="ad-brand">
+      <div class="ad-logo"><svg viewBox="0 0 24 24"><use href="#ai-wa"/></svg></div>
+      <div><b>{{ site_name }}</b><small>MULTI&#8209;SESSION</small></div>
+    </div>
+    <nav class="ad-nav">
+      {% for g in menu_groups %}
+      <div class="ad-lbl">{{ g.section }}</div>
+      {% for it in g.items %}
+      <a class="{% if active == it.active_key %}on{% endif %}" href="{{ it.url }}"><svg class="ad-ic"><use href="#ai-{{ it.icon }}"/></svg> {{ it.label }}{% if it.badge %} <span class="ad-pill">{{ it.badge }}</span>{% endif %}</a>
+      {% endfor %}
+      {% endfor %}
+    </nav>
+    <div class="ad-plan">
+      <div class="ad-pt">Pro Plan <span>ACTIVE</span></div>
+      <div class="ad-bar"><i></i></div>
+      <p>5 dari 10 sesi terpakai</p>
+      <a class="ad-up" href="/admin/wa/billing">Upgrade plan</a>
+    </div>
+  </aside>
+  <div class="ad-main">
+    <header class="ad-head">
+      <button class="ad-burger" type="button" onclick="document.body.classList.toggle('ad-open')"><svg class="ad-ic"><use href="#ai-list"/></svg></button>
+      <div class="ad-ttl">
+        <h1>{% block page_title %}Admin{% endblock %}</h1>
+        <div class="ad-crumb">{% block page_crumb %}Home <span>•</span> <b>Admin</b>{% endblock %}</div>
+      </div>
+      <div class="ad-search"><svg class="ad-ic" style="width:18px;height:18px"><use href="#ai-search"/></svg><input placeholder="Cari…"></div>
+      <div class="ad-ddw">
+        <button class="ad-iconbtn" id="adNotifBtn" type="button" aria-label="Notifikasi"><svg class="ad-ic"><use href="#ai-bell"/></svg><span class="ad-dot ad-hide" id="adNotifDot"></span></button>
+        <div class="ad-dd" id="adNotifDd">
+          <div class="ad-dd-h">Notifikasi <button type="button" id="adNotifClear">Tandai dibaca</button></div>
+          <div class="ad-dd-body" id="adNotifList"><div class="ad-notif-empty">Belum ada notifikasi</div></div>
+          <div class="ad-dd-foot"><a href="/admin/log-activity">Lihat semua aktivitas</a></div>
+        </div>
+      </div>
+      <a class="ad-btn ad-btn-pri" href="/admin/wa/sessions"><svg class="ad-ic" style="width:18px;height:18px"><use href="#ai-plus"/></svg> Hubungkan Nomor</a>
+      <div class="ad-ddw">
+        <div class="ad-user" id="adUserBtn" role="button" tabindex="0">
+          <div class="ad-avatar">{% if user_avatar and user_avatar != "default.png" %}<img src="/storage/user/avatar/{{ user_avatar }}" alt="">{% else %}{{ user_name | upper | truncate(length=2, end="") }}{% endif %}</div>
+          <div class="ad-meta"><div class="ad-nm">{{ user_name }}</div><div class="ad-rl">{{ user_role }}</div></div>
+          <svg class="ad-ic ad-chev"><use href="#ai-dn"/></svg>
+        </div>
+        <div class="ad-dd ad-user-dd" id="adUserDd">
+          <div class="ad-uh"><div class="ad-un">{{ user_name }}</div><div class="ad-ue">{{ user_email }}</div></div>
+          <a href="/admin/my-account"><svg class="ad-ic"><use href="#ai-user"/></svg> Akun Saya</a>
+          <a href="/admin/my-profile"><svg class="ad-ic"><use href="#ai-grid"/></svg> Profil</a>
+          <a href="/admin/my-security"><svg class="ad-ic"><use href="#ai-shield"/></svg> Keamanan</a>
+          <div class="ad-sep"></div>
+          <a href="/admin/logout" class="ad-danger"><svg class="ad-ic"><use href="#ai-logout"/></svg> Keluar</a>
+        </div>
+      </div>
+    </header>
+    <div class="ad-content">
+      {% block content %}{% endblock %}
+    </div>
+    <footer class="ad-foot"><div>© 2026 {{ site_name }} · dibangun dengan Baileys + Rust</div><div><a href="/admin/wa/api-keys">Dokumentasi</a><a href="/health">Status</a></div></footer>
+  </div>
+</div>
+<div class="ad-scrim" onclick="document.body.classList.remove('ad-open')"></div>
+
+<!-- Metronic JS (konten: DataTables, KTMenu, modal, toastr) -->
+<script>var hostUrl = "/assets/";</script>
+<script src="/assets/plugins/global/plugins.bundle.js"></script>
+<script src="/assets/js/scripts.bundle.js"></script>
+<script src="/assets/plugins/custom/datatables/datatables.bundle.js"></script>
+<script>
+// Shell: dropdown header (notif + user)
+(function(){
+  var dds=[['adNotifBtn','adNotifDd'],['adUserBtn','adUserDd']].map(function(p){return {btn:document.getElementById(p[0]),dd:document.getElementById(p[1])};}).filter(function(x){return x.btn&&x.dd;});
+  function closeAll(){dds.forEach(function(x){x.dd.classList.remove('open');});}
+  dds.forEach(function(x){
+    x.btn.addEventListener('click',function(e){e.stopPropagation();var o=x.dd.classList.contains('open');closeAll();if(!o)x.dd.classList.add('open');});
+    x.dd.addEventListener('click',function(e){e.stopPropagation();});
+  });
+  document.addEventListener('click',closeAll);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll();});
+  var clr=document.getElementById('adNotifClear');
+  if(clr)clr.addEventListener('click',function(){var d=document.getElementById('adNotifDot');if(d)d.classList.add('ad-hide');document.querySelectorAll('#adNotifList .ad-nitem.unread').forEach(function(n){n.classList.remove('unread');});});
+})();
+// Flash → toastr (Metronic)
+document.addEventListener('DOMContentLoaded',function(){
+  if(window.toastr){
+    toastr.options={closeButton:true,progressBar:true,positionClass:"toastr-top-right",timeOut:"5000"};
+    {% if flash_success %}toastr.success("{{ flash_success }}");{% endif %}
+    {% if flash_error %}toastr.error("{{ flash_error }}");{% endif %}
+    {% if flash_warning %}toastr.warning("{{ flash_warning }}");{% endif %}
+    {% if flash_info %}toastr.info("{{ flash_info }}");{% endif %}
+  }
+});
+// Realtime notif (WebSocket) → bell dropdown
+(function(){
+  var list=document.getElementById('adNotifList'), dot=document.getElementById('adNotifDot');
+  if(!list)return;
+  function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
+  function add(n){ if(n.kind==='system')return; var e=list.querySelector('.ad-notif-empty'); if(e)e.remove();
+    var el=document.createElement('div'); el.className='ad-nitem unread';
+    el.innerHTML='<div class="ad-nd"><svg class="ad-ic" style="width:17px;height:17px"><use href="#ai-bell"/></svg></div><div><div class="ad-nt">'+esc(n.title||'Notifikasi')+'</div><div class="ad-nm2">'+esc(n.body||'')+(n.ts?(' · '+esc(n.ts)):'')+'</div></div>';
+    list.insertBefore(el,list.firstChild);
+    while(list.querySelectorAll('.ad-nitem').length>15){list.removeChild(list.lastChild);}
+    if(dot)dot.classList.remove('ad-hide');
+    if(window.toastr&&n.title)toastr.info(n.body||'',n.title);
+  }
+  var ws,tries=0;
+  function connect(){try{var proto=location.protocol==='https:'?'wss':'ws';ws=new WebSocket(proto+'://'+location.host+'/admin/ws/notifications');ws.onopen=function(){tries=0;};ws.onmessage=function(ev){try{add(JSON.parse(ev.data));}catch(_){}};ws.onclose=function(){tries++;if(tries<30)setTimeout(connect,Math.min(1000*tries,8000));};ws.onerror=function(){try{ws.close();}catch(_){}};}catch(_){}}
+  if(window.WebSocket)connect();
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

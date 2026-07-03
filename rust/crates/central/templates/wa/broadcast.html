@@ -1,0 +1,172 @@
+{% extends "layout/wa.html" %}
+{% block title %}Broadcast{% endblock %}
+{% block page_title %}Broadcast{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <b>Broadcast</b>{% endblock %}
+
+{% block style %}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:18px}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15.5px;font-weight:700}
+.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:13px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:14px 22px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:capitalize}
+.badge.draft{color:var(--ink2);background:#eef0f4}
+.badge.scheduled{color:#7a5af0;background:#efeaff}
+.badge.running{color:#b9790a;background:var(--warn-soft)}
+.badge.paused{color:#b9790a;background:#fff3e0}
+.badge.done{color:var(--primary);background:var(--primary-soft)}
+.badge.canceled{color:var(--danger);background:var(--danger-soft)}
+.pbar{height:7px;background:var(--bg);border-radius:5px;overflow:hidden;min-width:120px}
+.pbar i{display:block;height:100%;background:var(--primary);border-radius:5px}
+.pmeta{font-size:11.5px;color:var(--muted);margin-top:4px}
+.empty{padding:38px;text-align:center;color:var(--muted);font-size:13.5px}
+.modal{position:fixed;inset:0;background:rgba(10,12,20,.55);display:none;place-items:center;z-index:200;padding:16px;overflow:auto}
+.modal.open{display:grid}
+.modal .box{background:#fff;border-radius:16px;padding:26px;width:min(560px,96vw);box-shadow:0 24px 60px rgba(0,0,0,.3);max-height:92vh;overflow:auto}
+.modal .box h3{font-size:18px;font-weight:800;margin-bottom:4px}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+.inp:focus{border-color:var(--primary)}
+textarea.inp{resize:vertical;font-family:inherit;line-height:1.5}
+.flbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin:14px 0 5px}
+.hint{font-size:11.5px;color:var(--muted);margin-top:5px}
+.hint code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px}
+.mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.btn-ghost{background:var(--bg);color:var(--ink2);font-weight:600;font-size:13.5px;padding:11px 16px;border-radius:9px;border:none;cursor:pointer}
+.linkbtn{color:var(--primary);font-weight:700;font-size:13px;text-decoration:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tpls{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.tplrow{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border-radius:9px;padding:10px 12px}
+.tplrow b{font-size:13px}.tplrow .tb{font-size:11.5px;color:var(--muted);max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tplrow button{background:none;border:none;cursor:pointer;color:var(--danger);font-weight:600;font-size:12px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="panel">
+    <div class="ph">
+      <div><h3>Campaign Broadcast</h3><div class="sub">Kirim pesan massal terjadwal dengan throttle anti-ban.</div></div>
+      <div style="display:flex;gap:9px">
+        <button class="btn-ghost" id="btnTpl" type="button">Template</button>
+        <button class="btn btn-pri" id="btnNew" type="button"><svg class="ic" style="width:18px;height:18px"><use href="#i-plus"/></svg> Buat Broadcast</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Nama</th><th>Nomor</th><th>Status</th><th>Progress</th><th>Waktu</th><th></th></tr></thead>
+        <tbody>
+          {% for c in campaigns %}
+          <tr>
+            <td><b>{{ c.name }}</b></td>
+            <td>{{ c.session }}</td>
+            <td><span class="badge {{ c.status }}">{{ c.status }}</span></td>
+            <td>
+              <div class="pbar"><i style="width:{{ c.pct }}%"></i></div>
+              <div class="pmeta">{{ c.sent }}/{{ c.total }} terkirim{% if c.failed %} · {{ c.failed }} gagal{% endif %}</div>
+            </td>
+            <td style="font-size:12.5px;color:var(--ink2)">{% if c.scheduled %}🗓 {{ c.scheduled }}{% else %}{{ c.created }}{% endif %}</td>
+            <td><a class="linkbtn" href="/admin/wa/broadcast/{{ c.id }}">Lihat →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if campaigns | length == 0 %}<div class="empty">Belum ada campaign. Klik <b>"Buat Broadcast"</b> untuk memulai.</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Buat Broadcast -->
+<div class="modal" id="mNew"><div class="box">
+  <h3>Buat Broadcast</h3>
+  <p class="hint">Pesan dikirim bertahap lewat antrian throttle nomor agar aman dari blokir.</p>
+  <form method="post" action="/admin/wa/broadcast">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <label class="flbl">Nomor pengirim</label>
+    {% if sessions | length == 0 %}
+      <div class="hint" style="color:var(--danger)">Belum ada nomor <b>connected</b>. Tautkan & hubungkan nomor di menu <a href="/admin/wa/sessions">Sesi WhatsApp</a> dulu.</div>
+    {% else %}
+    <select name="session_id" class="inp" required>
+      {% for s in sessions %}<option value="{{ s.id }}">{{ s.label }}{% if s.phone %} (+{{ s.phone }}){% endif %}</option>{% endfor %}
+    </select>
+    {% endif %}
+
+    <div class="row2">
+      <div>
+        <label class="flbl">Nama campaign</label>
+        <input name="name" class="inp" placeholder="mis. Promo Juni" maxlength="80">
+      </div>
+      <div>
+        <label class="flbl">Pakai template</label>
+        <select class="inp" id="tplPick"><option value="">— kosong —</option>
+          {% for t in templates %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <label class="flbl">Isi pesan</label>
+    <textarea name="body" id="body" class="inp" rows="5" placeholder="Halo {{ '{{nama}}' }}, ada {promo|penawaran} spesial untukmu!" required></textarea>
+    <p class="hint">Variabel: <code>{{ '{{nama}}' }}</code> diisi dari kolom nama penerima. Spintax: <code>{halo|hai|hi}</code> dipilih acak per kontak (anti pesan kembar).</p>
+
+    <label class="flbl">Daftar penerima</label>
+    <textarea name="targets" class="inp" rows="6" placeholder="628123456789,Budi&#10;628987654321,Sari&#10;08111222333" required></textarea>
+    <p class="hint">Satu nomor per baris, format <code>nomor,Nama</code> (Nama opsional). Nomor 0/8 otomatis jadi 62. Duplikat &amp; nomor tak valid dilewati. Maks 5.000/campaign.</p>
+
+    <label class="flbl">Jadwalkan (opsional)</label>
+    <input type="datetime-local" name="schedule_at" class="inp">
+    <p class="hint">Kosongkan untuk <b>kirim sekarang</b>. Waktu mengikuti zona WIB.</p>
+
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Batal</button><button type="submit" class="btn btn-pri" {% if sessions | length == 0 %}disabled{% endif %}>Buat &amp; Mulai</button></div>
+  </form>
+</div></div>
+
+<!-- Modal: Template -->
+<div class="modal" id="mTpl"><div class="box">
+  <h3>Template Pesan</h3>
+  <p class="hint">Simpan pesan yang sering dipakai. Bisa pakai variabel &amp; spintax.</p>
+  <form method="post" action="/admin/wa/templates">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <label class="flbl">Nama template</label>
+    <input name="name" class="inp" placeholder="mis. Sapaan Promo" maxlength="80" required>
+    <label class="flbl">Isi</label>
+    <textarea name="body" class="inp" rows="4" placeholder="Halo {{ '{{nama}}' }}, {selamat pagi|salam}!" required></textarea>
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Tutup</button><button type="submit" class="btn btn-pri">Simpan Template</button></div>
+  </form>
+  {% if templates | length > 0 %}
+  <label class="flbl">Tersimpan</label>
+  <div class="tpls">
+    {% for t in templates %}
+    <div class="tplrow" data-id="{{ t.id }}"><div><b>{{ t.name }}</b><div class="tb">{{ t.body }}</div></div><button class="tplDel" data-id="{{ t.id }}">Hapus</button></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var CSRF="{{ csrf_token }}";
+  var TPLS={};
+  {% for t in templates %}TPLS["{{ t.id }}"]={{ t.body | json_encode | safe }};
+  {% endfor %}
+  function $(s){return document.querySelector(s);}
+  function openM(id){$('#'+id).classList.add('open');}
+  function closeM(el){el.classList.remove('open');}
+  document.querySelectorAll('[data-close]').forEach(function(b){b.addEventListener('click',function(){closeM(b.closest('.modal'));});});
+  document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)closeM(m);});});
+  var bn=$('#btnNew'); if(bn) bn.addEventListener('click',function(){openM('mNew');});
+  var bt=$('#btnTpl'); if(bt) bt.addEventListener('click',function(){openM('mTpl');});
+  var tp=$('#tplPick'); if(tp) tp.addEventListener('change',function(){ var v=TPLS[this.value]; if(v!==undefined) $('#body').value=v; });
+  document.querySelectorAll('.tplDel').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(!confirm('Hapus template ini?')) return;
+      fetch('/admin/wa/templates/'+b.getAttribute('data-id'),{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}})
+        .then(function(){ var r=b.closest('.tplrow'); if(r) r.remove(); });
+    });
+  });
+})();
+</script>
+{% endblock %}

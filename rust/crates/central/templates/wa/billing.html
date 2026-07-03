@@ -1,0 +1,135 @@
+{% extends "layout/wa.html" %}
+{% block title %}Billing & Plan{% endblock %}
+{% block page_title %}Billing & Plan{% endblock %}
+{% block page_crumb %}Akun <span>•</span> <b>Billing</b>{% endblock %}
+
+{% block style %}
+.alert{border-radius:12px;padding:14px 18px;font-size:13.5px;font-weight:600;margin-bottom:18px;display:flex;gap:10px;align-items:center}
+.alert.success{background:var(--primary-soft);color:var(--primary)}
+.alert.pending{background:var(--warn-soft);color:#b9790a}
+.alert.error{background:var(--danger-soft);color:var(--danger)}
+.cur{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:22px;margin-bottom:20px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:center}
+.cur .pn{font-size:22px;font-weight:800}
+.cur .meta{font-size:13px;color:var(--ink2);margin-top:5px}
+.cur .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:11.5px;font-weight:600;background:var(--bg);color:var(--ink2);padding:4px 10px;border-radius:20px}
+.stbadge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px}
+.stbadge.active{background:var(--primary-soft);color:var(--primary)}
+.stbadge.expired{background:var(--danger-soft);color:var(--danger)}
+.notice{background:#fff8e9;border:1px dashed #e6c66b;color:#8a6d1f;border-radius:12px;padding:13px 16px;font-size:13px;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:24px}
+.pcard{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);border:2px solid transparent;overflow:hidden;display:flex;flex-direction:column}
+.pcard.cur{border-color:var(--primary);padding:0;display:flex}
+.pcard .top{padding:20px 22px;border-bottom:1px solid var(--line)}
+.pcard .nm{font-size:17px;font-weight:800}
+.pcard .pr{font-size:26px;font-weight:800;margin-top:8px}.pcard .pr small{font-size:13px;color:var(--muted);font-weight:600}
+.pcard .pr.free{color:var(--primary)}
+.pcard ul{list-style:none;padding:18px 22px;margin:0;flex:1;display:flex;flex-direction:column;gap:10px}
+.pcard li{font-size:13.5px;color:var(--ink2);display:flex;gap:9px;align-items:center}
+.pcard li b{color:var(--ink)}
+.pcard li .dot{width:16px;height:16px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:10px;font-weight:800;flex-shrink:0}
+.pcard li.off{color:var(--muted);text-decoration:none}.pcard li.off .dot{background:#eef0f4;color:#aab}
+.pcard .ft{padding:0 22px 22px}
+.pcard .ft button{width:100%}
+.curtag{background:var(--primary);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:6px;letter-spacing:.04em}
+.btn-soft{width:100%;background:var(--bg);color:var(--ink2);font-weight:700;border:none;border-radius:9px;padding:11px;font-size:13.5px}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{padding:16px 22px;border-bottom:1px solid var(--line)}.panel .ph h3{font-size:15px;font-weight:700}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:12px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:13px 22px;border-bottom:1px solid var(--line);font-size:13px}
+.tbl tr:last-child td{border-bottom:none}
+.ist{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:14px;text-transform:capitalize}
+.ist.paid{background:var(--primary-soft);color:var(--primary)}
+.ist.pending{background:var(--warn-soft);color:#b9790a}
+.ist.failed,.ist.canceled,.ist.expired{background:var(--danger-soft);color:var(--danger)}
+.empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  {% if pay_status == "success" %}<div class="alert success">✅ Pembayaran diterima. Paket akan aktif beberapa saat setelah konfirmasi Midtrans.</div>
+  {% elif pay_status == "pending" %}<div class="alert pending">⏳ Menunggu pembayaran. Paket aktif otomatis setelah lunas.</div>
+  {% elif pay_status == "error" %}<div class="alert error">❌ Pembayaran gagal / dibatalkan. Silakan coba lagi.</div>{% endif %}
+
+  {% if current %}
+  <div class="cur">
+    <div>
+      <div class="pn">{{ current.name }}</div>
+      <div class="meta">
+        {% if current.lifetime %}Paket dasar — tanpa batas waktu.
+        {% elif current.active %}Aktif · <b>{{ current.days_left }} hari</b> lagi (berlaku s/d {{ current.expires }}).
+        {% else %}Masa berlaku habis ({{ current.expires }}).{% endif %}
+      </div>
+      <div class="chips">
+        <span class="chip">{{ current.max_sessions }} nomor</span>
+        <span class="chip">{{ current.max_messages_per_day }} pesan/hari</span>
+        <span class="chip">AI: {% if current.ai_enabled %}Ya{% else %}—{% endif %}</span>
+        <span class="chip">Webhook: {% if current.webhook_enabled %}Ya{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    <span class="stbadge {% if current.active %}active{% else %}expired{% endif %}">{% if current.active %}Aktif{% else %}Kadaluarsa{% endif %}</span>
+  </div>
+  {% endif %}
+
+  {% if is_super %}
+  <div class="notice">👑 Anda Superadmin — akses tak terbatas (tidak perlu berlangganan). Halaman ini untuk subscriber; kelola harga/paket di <a href="/admin/plans">Master Plan</a>.</div>
+  {% elif not midtrans_configured %}
+  <div class="notice">⚠️ Pembayaran belum dikonfigurasi. Hubungi admin untuk mengaktifkan Midtrans (Pengaturan → Payment).</div>
+  {% endif %}
+
+  <div class="grid">
+    {% for p in plans %}
+    <div class="pcard{% if p.is_current %} cur{% endif %}">
+      {% if p.is_current %}<div class="curtag">PAKET ANDA</div>{% endif %}
+      <div class="top">
+        <div class="nm">{{ p.name }}</div>
+        {% if p.price > 0 %}<div class="pr">Rp {{ p.price_fmt }}<small> /30 hari</small></div>{% else %}<div class="pr free">Gratis</div>{% endif %}
+      </div>
+      <ul>
+        <li><span class="dot">✓</span> <b>{{ p.max_sessions }}</b> nomor WhatsApp</li>
+        <li><span class="dot">✓</span> <b>{{ p.max_messages_per_day }}</b> pesan / hari</li>
+        <li class="{% if not p.ai_enabled %}off{% endif %}"><span class="dot">{% if p.ai_enabled %}✓{% else %}–{% endif %}</span> AI Chatbot</li>
+        <li class="{% if not p.webhook_enabled %}off{% endif %}"><span class="dot">{% if p.webhook_enabled %}✓{% else %}–{% endif %}</span> Webhook keluar</li>
+      </ul>
+      <div class="ft">
+        {% if p.is_current %}
+          <button class="btn-soft" disabled>Paket aktif</button>
+        {% elif p.buyable %}
+          <form method="post" action="/admin/wa/billing/checkout">
+            <input type="hidden" name="_token" value="{{ csrf_token }}">
+            <input type="hidden" name="plan_id" value="{{ p.id }}">
+            <button type="submit" class="btn btn-pri">Langganan</button>
+          </form>
+        {% elif p.price == 0 %}
+          <button class="btn-soft" disabled>Paket dasar</button>
+        {% else %}
+          <button class="btn-soft" disabled>Belum tersedia</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h3>Riwayat Transaksi</h3></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Order ID</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Tanggal</th></tr></thead>
+        <tbody>
+          {% for i in invoices %}
+          <tr>
+            <td class="mono">{{ i.order_id }}</td>
+            <td>{{ i.plan }}</td>
+            <td>Rp {{ i.amount_fmt }}</td>
+            <td><span class="ist {{ i.status }}">{{ i.status }}</span></td>
+            <td style="color:var(--muted)">{{ i.created }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if invoices | length == 0 %}<div class="empty">Belum ada transaksi.</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

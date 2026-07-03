@@ -1,0 +1,218 @@
+{% extends "layout/wa.html" %}
+{% block title %}Sesi WhatsApp{% endblock %}
+{% block page_title %}Sesi WhatsApp{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <b>Sesi</b>{% endblock %}
+
+{% block style %}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15.5px;font-weight:700}
+.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:13px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:15px 22px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#fafbfc}
+.badge{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:20px;text-transform:capitalize}
+.badge .d{width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.connected{color:var(--primary);background:var(--primary-soft)}
+.badge.connected .d{animation:pulse 1.6s infinite}
+.badge.qr,.badge.connecting,.badge.pending{color:#b9790a;background:var(--warn-soft)}
+.badge.disconnected,.badge.logged_out{color:var(--danger);background:var(--danger-soft)}
+.badge.banned{color:var(--ink2);background:#eef0f4}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 6px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+.acts{display:flex;gap:6px}
+.acts button{width:34px;height:34px;border-radius:8px;background:var(--bg);color:var(--ink2);display:grid;place-items:center;border:none;cursor:pointer;transition:.15s}
+.acts button:hover{background:#e9ecf2;color:var(--ink)}
+.acts button.red:hover{background:var(--danger-soft);color:var(--danger)}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:13.5px}
+.modal{position:fixed;inset:0;background:rgba(10,12,20,.55);display:none;place-items:center;z-index:200;padding:16px}
+.modal.open{display:grid}
+.modal .box{background:#fff;border-radius:16px;padding:26px;width:min(420px,94vw);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal .box h3{font-size:18px;font-weight:800;margin-bottom:6px}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:14px;margin-top:6px;outline:none}
+.inp:focus{border-color:var(--primary)}
+.mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.btn-ghost{background:var(--bg);color:var(--ink2);font-weight:600;font-size:13.5px;padding:11px 16px;border-radius:9px;border:none;cursor:pointer}
+.qrhint{color:var(--ink2);font-size:13px;margin:6px 0 16px}
+.qrwrap{position:relative;width:240px;height:240px;margin:0 auto 8px;border:1px solid var(--line);border-radius:14px;display:grid;place-items:center;overflow:hidden}
+.qrwrap img{width:100%;height:100%;object-fit:contain;display:none}
+.qrwrap img.show{display:block}
+#qrWait{position:absolute;color:var(--muted);font-size:13px}
+.lvlsel{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:12.5px;background:var(--card);color:var(--ink);cursor:pointer;outline:none}
+.lvlsel:focus{border-color:var(--primary)}
+.lvlsel.agg{border-color:var(--danger);color:var(--danger);font-weight:600}
+.chk{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500}
+.flbl{font-size:12.5px;font-weight:600;color:var(--ink2);margin-top:12px;display:block}
+textarea.inp{resize:vertical;font-family:inherit}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="panel">
+    <div class="ph">
+      <div><h3>Sesi WhatsApp</h3><div class="sub"><b>{{ sessions_used }}{% if sessions_max %} / {{ sessions_max }}{% endif %}</b> nomor terpakai · via Baileys</div></div>
+      <button class="btn btn-pri" id="btnNew" type="button"><svg class="ic" style="width:18px;height:18px"><use href="#i-plus"/></svg> Hubungkan Nomor</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Nama</th><th>Nomor</th><th>Status</th><th>Level anti-ban</th><th>Terakhir aktif</th><th>Aksi</th></tr></thead>
+        <tbody id="rows">
+          {% for s in wa_sessions %}
+          <tr data-id="{{ s.id }}">
+            <td><b>{{ s.label }}</b></td>
+            <td class="mono cPhone">{% if s.phone %}+{{ s.phone }}{% else %}—{% endif %}</td>
+            <td class="cStatus"><span class="badge {{ s.status }}"><span class="d"></span>{{ s.status }}</span>{% if s.sim %} <span class="badge" style="background:#efeaff;color:#7a5af0">🧪 SIM</span>{% endif %}</td>
+            <td>
+              <form method="post" action="/admin/wa/sessions/{{ s.id }}/level" style="margin:0">
+                <input type="hidden" name="_token" value="{{ csrf_token }}">
+                <select name="level" class="lvlsel{% if s.level == 'aggressive' %} agg{% endif %}" onchange="this.form.submit()" title="Atur kecepatan & batas kirim (anti-ban)">
+                  <option value="safe" {% if s.level == 'safe' %}selected{% endif %}>🟢 Safe (paling aman)</option>
+                  <option value="normal" {% if s.level == 'normal' %}selected{% endif %}>🟡 Normal</option>
+                  <option value="aggressive" {% if s.level == 'aggressive' %}selected{% endif %}>🔴 Aggressive (risiko ban!)</option>
+                </select>
+              </form>
+            </td>
+            <td class="cLast">{{ s.last }}</td>
+            <td><div class="acts">
+              <button class="qrBtn" data-id="{{ s.id }}" title="Lihat QR"><svg class="ic" style="width:17px;height:17px"><use href="#i-qr"/></svg></button>
+              <button class="rsBtn" data-id="{{ s.id }}" title="Restart / QR ulang"><svg class="ic" style="width:17px;height:17px"><use href="#i-refresh"/></svg></button>
+              <button class="loBtn red" data-id="{{ s.id }}" title="Logout"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button>
+              <button class="aiBtn" data-id="{{ s.id }}" data-en="{{ s.ai_enabled }}" data-model="{{ s.ai_model }}" data-prompt="{{ s.ai_prompt }}" title="AI Chatbot"><svg class="ic" style="width:17px;height:17px"><use href="#i-bolt"/></svg></button>
+              {% if s.sim %}<button class="simBtn" data-id="{{ s.id }}" title="Simulasi pesan masuk" style="font-size:15px">🧪</button>{% endif %}
+              <button class="delBtn red" data-id="{{ s.id }}" title="Hapus"><svg class="ic" style="width:17px;height:17px"><use href="#i-power"/></svg></button>
+            </div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if wa_sessions | length == 0 %}<div class="empty" id="emptyRow">Belum ada sesi. Klik <b>"Hubungkan Nomor"</b> untuk menautkan WhatsApp.</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mCreate"><div class="box">
+  <h3>Hubungkan Nomor Baru</h3>
+  <p class="qrhint">Beri nama sesi, lalu scan QR dari WhatsApp di HP.</p>
+  <form id="fCreate" method="post" action="/admin/wa/sessions">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <label class="flbl" style="margin-top:0">Nama sesi (opsional)</label>
+    <input name="label" class="inp" placeholder="mis. Toko Saya" maxlength="60">
+    <label class="flbl">Level anti-ban</label>
+    <select name="level" class="inp" id="cLevel">
+      <option value="safe">🟢 Safe — paling aman (jeda 12–30 dtk · maks 20/jam · 120/hari)</option>
+      <option value="normal" selected>🟡 Normal — seimbang (jeda 6–18 dtk · maks 40/jam · 300/hari)</option>
+      <option value="aggressive">🔴 Aggressive — cepat, risiko ban tinggi (jeda 3–9 dtk · maks 80/jam · 600/hari)</option>
+    </select>
+    <p class="qrhint" style="margin:8px 0 0">Untuk nomor baru / warmup, pilih <b>Safe</b>. Level bisa diubah kapan saja dari tabel.</p>
+    <label class="chk" style="margin-top:14px"><input type="checkbox" name="sim" value="on"> 🧪 Mode simulasi (uji coba tanpa scan QR / nomor nyata)</label>
+    <p class="qrhint" style="margin:6px 0 0">Nomor simulasi langsung "tersambung" dan bisa diuji kirim/terima &amp; AI tanpa WhatsApp asli — cocok untuk demo.</p>
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Batal</button><button type="submit" class="btn btn-pri">Buat &amp; Connect</button></div>
+  </form>
+</div></div>
+
+<div class="modal" id="mQr"><div class="box" style="text-align:center">
+  <h3>Scan QR Code</h3>
+  <p class="qrhint">WhatsApp → <b>Perangkat Tertaut</b> → <b>Tautkan Perangkat</b> → arahkan kamera ke QR.</p>
+  <div class="qrwrap"><img id="qrImg" alt="QR"><div id="qrWait">Memuat QR…</div></div>
+  <div class="mfoot" style="justify-content:center"><button type="button" class="btn-ghost" data-close>Tutup</button></div>
+</div></div>
+
+<div class="modal" id="mAi"><div class="box">
+  <h3>⚡ AI Chatbot</h3>
+  <p class="qrhint">Balas otomatis chat masuk pakai AI (Ollama lokal). Hanya aktif untuk paket <b>Premium / Enterprise</b>.</p>
+  <form id="fAi" method="post" action="">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <label class="chk"><input type="checkbox" name="ai_enabled" id="aiEn" value="on"> Aktifkan AI auto-reply</label>
+    <label class="flbl">Model</label>
+    <select name="ai_model" id="aiModel" class="inp">
+      <option value="qwen2.5:3b">qwen2.5:3b ⚡ (cepat, muat di GPU 4GB — rekomendasi)</option>
+      <option value="qwen2.5:1.5b">qwen2.5:1.5b ⚡⚡ (paling cepat, kualitas lebih ringan)</option>
+      <option value="qwen2.5">qwen2.5 (7B, paling pintar, butuh GPU besar / lebih lambat)</option>
+      <option value="llama3.1">llama3.1 (8B)</option>
+    </select>
+    <p class="qrhint" style="margin:6px 0 0;font-size:11.5px">Pastikan model sudah di-<code>ollama pull</code> dulu. Untuk balasan cepat di GPU 4GB, pakai <b>qwen2.5:3b</b>.</p>
+    <label class="flbl">System prompt (persona &amp; pengetahuan)</label>
+    <textarea name="ai_system_prompt" id="aiPrompt" class="inp" rows="4" placeholder="Kosongkan untuk persona CS default (ramah, singkat, Bahasa Indonesia)…"></textarea>
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Batal</button><button type="submit" class="btn btn-pri">Simpan</button></div>
+  </form>
+</div></div>
+
+<div class="modal" id="mSim"><div class="box">
+  <h3>🧪 Simulasi Pesan Masuk</h3>
+  <p class="qrhint">Kirim pesan "seolah-olah" dari kontak ke nomor simulasi ini. Berguna menguji Inbox, balasan AI, webhook &amp; dashboard tanpa WhatsApp nyata.</p>
+  <form id="fSim" method="post" action="">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <label class="flbl">Dari nomor (pengirim)</label>
+    <input name="from" class="inp" placeholder="628123456789" value="628123456789">
+    <label class="flbl">Isi pesan</label>
+    <textarea name="text" class="inp" rows="3" placeholder="Halo, produknya masih ada?">Halo, produknya masih ada?</textarea>
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Batal</button><button type="submit" class="btn btn-pri">Kirim Simulasi</button></div>
+  </form>
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var CSRF = "{{ csrf_token }}";
+  function $(s,r){return (r||document).querySelector(s);}
+  function openM(id){ $('#'+id).classList.add('open'); }
+  function closeM(el){ el.classList.remove('open'); }
+  document.querySelectorAll('[data-close]').forEach(function(b){ b.addEventListener('click', function(){ closeM(b.closest('.modal')); }); });
+  document.querySelectorAll('.modal').forEach(function(m){ m.addEventListener('click', function(e){ if(e.target===m) closeM(m); }); });
+
+  var btnNew = $('#btnNew'); if(btnNew) btnNew.addEventListener('click', function(){ openM('mCreate'); });
+
+  var curQr = null; // session id yang QR modalnya sedang dibuka
+  function setQr(dataUrl){ var img=$('#qrImg'), w=$('#qrWait'); if(dataUrl){ img.src=dataUrl; img.classList.add('show'); if(w)w.style.display='none'; } else { img.classList.remove('show'); if(w)w.style.display='block'; } }
+  var qrTimer=null;
+  function openQr(id){
+    curQr=id; setQr(null); openM('mQr');
+    // pastikan sesi dijalankan di sidecar (restart = start), lalu polling QR
+    fetch('/admin/wa/sessions/'+id+'/restart',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}}).catch(function(){});
+    if(qrTimer) clearInterval(qrTimer);
+    var tries=0;
+    function poll(){
+      if(curQr!==id || !$('#mQr').classList.contains('open')){ clearInterval(qrTimer); return; }
+      if(++tries>40){ clearInterval(qrTimer); var w=$('#qrWait'); if(w) w.textContent='Gateway tidak merespon. Pastikan sidecar (dev-all.ps1) berjalan.'; return; }
+      fetch('/admin/wa/sessions/'+id+'/qr',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(j){
+        if(curQr!==id) return;
+        if(j.qr) setQr(j.qr);
+        if(j.status==='connected'){ clearInterval(qrTimer); closeM($('#mQr')); }
+      }).catch(function(){});
+    }
+    poll(); qrTimer=setInterval(poll, 2000);
+  }
+  function openAi(b){ var id=b.getAttribute('data-id'); $('#fAi').action='/admin/wa/sessions/'+id+'/ai'; $('#aiEn').checked=(b.getAttribute('data-en')==='true'); $('#aiModel').value=b.getAttribute('data-model')||'qwen2.5'; $('#aiPrompt').value=b.getAttribute('data-prompt')||''; openM('mAi'); }
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var id = b.getAttribute('data-id'); if(!id) return;
+    if(b.classList.contains('aiBtn')){ openAi(b); return; }
+    if(b.classList.contains('simBtn')){ $('#fSim').action='/admin/wa/sessions/'+id+'/simulate'; openM('mSim'); return; }
+    if(b.classList.contains('qrBtn')) openQr(id);
+    else if(b.classList.contains('rsBtn')){ fetch('/admin/wa/sessions/'+id+'/restart',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}}).then(function(){ openQr(id); }); }
+    else if(b.classList.contains('loBtn')){ if(confirm('Logout sesi ini?')) fetch('/admin/wa/sessions/'+id+'/logout',{method:'POST',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}}).then(function(){ updRow(id,{event:'logged_out',data:{}}); }); }
+    else if(b.classList.contains('delBtn')){ if(confirm('Hapus sesi ini permanen?')) fetch('/admin/wa/sessions/'+id,{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}}).then(function(){ var tr=document.querySelector('tr[data-id="'+id+'"]'); if(tr) tr.remove(); }); }
+  });
+
+  function badge(status){ return '<span class="badge '+status+'"><span class="d"></span>'+status+'</span>'; }
+  function updRow(id, detail){
+    var tr = document.querySelector('tr[data-id="'+id+'"]'); if(!tr) return;
+    var ev = detail.event, data = detail.data||{};
+    if(ev==='connected'){ tr.querySelector('.cStatus').innerHTML=badge('connected'); if(data.phone) tr.querySelector('.cPhone').textContent='+'+data.phone; tr.querySelector('.cLast').textContent='Baru saja'; if(curQr===id){ closeM($('#mQr')); } }
+    else if(ev==='qr'){ tr.querySelector('.cStatus').innerHTML=badge('qr'); if(curQr===id && data.qr) setQr(data.qr); }
+    else if(ev==='disconnected'){ tr.querySelector('.cStatus').innerHTML=badge('disconnected'); }
+    else if(ev==='banned'){ tr.querySelector('.cStatus').innerHTML=badge('banned'); }
+    else if(ev==='logged_out'){ tr.querySelector('.cStatus').innerHTML=badge('logged_out'); tr.querySelector('.cPhone').textContent='—'; }
+  }
+
+  // event realtime dari shell WS (kind==="wa" → CustomEvent 'wa-event')
+  window.addEventListener('wa-event', function(e){
+    var d = e.detail || {}; if(!d.session_id) return;
+    updRow(d.session_id, { event: d.event, data: d.data });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "layout/wa.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_crumb %}{{ crumb | safe }}{% endblock %}
+
+{% block style %}
+.ph-card{background:var(--card);border-radius:16px;box-shadow:var(--sh);max-width:640px;margin:34px auto;padding:48px 40px;text-align:center}
+.ph-ic{width:74px;height:74px;border-radius:18px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;margin:0 auto 22px}
+.ph-ic .ic{width:38px;height:38px}
+.ph-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;color:#b9790a;background:var(--warn-soft);padding:5px 12px;border-radius:20px;text-transform:uppercase}
+.ph-card h2{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:16px 0 10px}
+.ph-card>p{color:var(--ink2);font-size:14.5px;line-height:1.6;max-width:480px;margin:0 auto}
+.ph-feat{list-style:none;text-align:left;max-width:430px;margin:26px auto 8px;display:flex;flex-direction:column;gap:12px}
+.ph-feat li{display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--ink);font-weight:500}
+.ph-feat li .ck{width:22px;height:22px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;flex:none}
+.ph-feat li .ck b{width:7px;height:7px;border-radius:50%;background:currentColor;display:block}
+.ph-actions{margin:28px 0 14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn-ghost{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;border-radius:9px;padding:11px 16px;background:var(--bg);color:var(--ink2)}
+.btn-ghost:hover{background:#e9ecf2}
+.ph-note{color:var(--muted);font-size:12.5px;margin-top:6px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="ph-card">
+    <div class="ph-ic"><svg class="ic"><use href="#{{ ph_icon }}"/></svg></div>
+    <div><span class="ph-badge">Segera · Fase B</span></div>
+    <h2>{{ title }}</h2>
+    <p>{{ ph_desc }}</p>
+    <ul class="ph-feat">
+      {% for f in ph_features %}<li><span class="ck"><b></b></span> {{ f }}</li>{% endfor %}
+    </ul>
+    <div class="ph-actions">
+      <a class="btn btn-pri" href="/admin/dashboard"><svg class="ic" style="width:18px;height:18px"><use href="#i-grid"/></svg> Kembali ke Dashboard</a>
+      <a class="btn-ghost" href="/admin/wa/api-keys">Lihat dokumentasi</a>
+    </div>
+    <p class="ph-note">Modul ini akan aktif setelah integrasi gateway Baileys (Fase B).</p>
+  </div>
+</div>
+{% endblock %}

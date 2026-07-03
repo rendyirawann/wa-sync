@@ -1,0 +1,57 @@
+# ===== RAHASIA — JANGAN PERNAH COMMIT (repo publik!) =====
+.env
+.env.backup
+.env.production
+**/.env
+*.env
+!**/.env.example
+# Kredensial sesi WhatsApp (Baileys) — setara login WA, sangat sensitif
+wa-sidecar/auth/
+**/auth/
+# Kunci / sertifikat
+*.pem
+*.key
+*.p12
+*.pfx
+/auth.json
+
+# ===== Rust =====
+/rust/target/
+**/target/
+**/*.rs.bk
+
+# ===== Node / sidecar =====
+/node_modules
+**/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ===== PHP / Laravel =====
+/vendor
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/logs/*
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+Homestead.json
+Homestead.yaml
+
+# ===== Log & sementara =====
+*.log
+*.tmp
+/tmp/
+
+# ===== OS / Editor =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+*.swp

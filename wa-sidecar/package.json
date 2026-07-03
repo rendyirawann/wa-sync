@@ -1,0 +1,17 @@
+{
+  "name": "wa-sidecar",
+  "version": "1.0.0",
+  "description": "WhatsApp gateway sidecar (Baileys) untuk wa-sync — dipanggil oleh Rust/Axum via loopback HTTP.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
+    "fastify": "^5.8.5",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,185 @@
+{# Sidebar (Custom addition for Demo 11 layout) — menu WA Service selaras shell custom #}
+<div id="kt_app_sidebar" class="d-flex flex-column">
+
+    <!--begin::Sidebar Header-->
+    <div class="d-flex flex-column align-items-center px-6 pt-8 pb-5">
+        <a href="/admin/dashboard" class="mb-4">
+            <img alt="Logo" src="/assets/media/logos/{{ site_logo }}" class="h-40px" />
+        </a>
+        <h5 class="fw-bold text-gray-800 mb-0 fs-6">{{ site_name }}</h5>
+        <span class="text-muted fs-8">WhatsApp Service</span>
+    </div>
+    <!--end::Sidebar Header-->
+
+    <div class="separator mx-6 mb-3"></div>
+
+    <!--begin::Sidebar Menu-->
+    <div class="px-4 flex-column-fluid">
+        <div class="menu menu-column menu-rounded menu-sub-indention menu-active-bg fw-semibold fs-6" data-kt-menu="true">
+
+            <!--begin::Dashboard-->
+            <div class="menu-item">
+                <a class="menu-link {% if active == "dashboard" %}active{% endif %}" href="/admin/dashboard">
+                    <span class="menu-icon">
+                        <i class="ki-duotone ki-element-11 fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i>
+                    </span>
+                    <span class="menu-title">Dashboard</span>
+                </a>
+            </div>
+            <!--end::Dashboard-->
+
+            <!--begin::Section: WhatsApp-->
+            <div class="menu-item pt-5">
+                <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">WhatsApp</span></div>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "sessions" %}active{% endif %}" href="/admin/wa/sessions">
+                    <span class="menu-icon"><i class="ki-duotone ki-technology-2 fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">Sesi WhatsApp</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "subscribers" %}active{% endif %}" href="/admin/wa/subscribers">
+                    <span class="menu-icon"><i class="ki-duotone ki-people fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i></span>
+                    <span class="menu-title">Subscriber</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "broadcast" %}active{% endif %}" href="/admin/wa/broadcast">
+                    <span class="menu-icon"><i class="ki-duotone ki-send fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">Broadcast</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "messages" %}active{% endif %}" href="/admin/wa/messages">
+                    <span class="menu-icon"><i class="ki-duotone ki-message-text-2 fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i></span>
+                    <span class="menu-title">Pesan &amp; Inbox</span>
+                </a>
+            </div>
+            <!--end::Section: WhatsApp-->
+
+            <!--begin::Section: Developer-->
+            <div class="menu-item pt-5">
+                <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Developer</span></div>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "api-keys" %}active{% endif %}" href="/admin/wa/api-keys">
+                    <span class="menu-icon"><i class="ki-duotone ki-key fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">API Keys</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "webhooks" %}active{% endif %}" href="/admin/wa/webhooks">
+                    <span class="menu-icon"><i class="ki-duotone ki-abstract-26 fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">Webhooks</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {% if active == "log-activity" %}active{% endif %}" href="/admin/log-activity">
+                    <span class="menu-icon"><i class="ki-duotone ki-notepad fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i></span>
+                    <span class="menu-title">Log Aktivitas</span>
+                </a>
+            </div>
+            <!--end::Section: Developer-->
+
+            <!--begin::Section: Akun-->
+            <div class="menu-item pt-5">
+                <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Akun</span></div>
+            </div>
+            <!--begin::My Account-->
+            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {% if active == "account" or active == "my-security" or active == "my-activity" or active == "my-login-session" %}here show{% endif %}">
+                <span class="menu-link">
+                    <span class="menu-icon">
+                        <i class="ki-duotone ki-profile-circle fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                    </span>
+                    <span class="menu-title">Akun Saya</span>
+                    <span class="menu-arrow"></span>
+                </span>
+                <div class="menu-sub menu-sub-accordion {% if active == "account" or active == "my-security" or active == "my-activity" or active == "my-login-session" %}show{% endif %}">
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "account" %}active{% endif %}" href="/admin/my-account">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Overview</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "my-security" %}active{% endif %}" href="/admin/my-security">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Keamanan</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "my-activity" %}active{% endif %}" href="/admin/my-activity">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Aktivitas</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "my-login-session" %}active{% endif %}" href="/admin/mmy-login-session">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Sesi Login</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!--end::My Account-->
+            <div class="menu-item">
+                <a class="menu-link {% if active == "billing" %}active{% endif %}" href="/admin/wa/billing">
+                    <span class="menu-icon"><i class="ki-duotone ki-credit-cart fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">Billing &amp; Plan</span>
+                </a>
+            </div>
+            <!--end::Section: Akun-->
+
+            <!--begin::Section: System-->
+            {% if can_view_resources %}
+            <div class="menu-item pt-5">
+                <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Sistem</span></div>
+            </div>
+            <!--begin::User Management-->
+            <div data-kt-menu-trigger="click" class="menu-item menu-accordion {% if active == "users" or active == "roles" %}here show{% endif %}">
+                <span class="menu-link">
+                    <span class="menu-icon">
+                        <i class="ki-duotone ki-shield-tick fs-3"><span class="path1"></span><span class="path2"></span></i>
+                    </span>
+                    <span class="menu-title">User Management</span>
+                    <span class="menu-arrow"></span>
+                </span>
+                <div class="menu-sub menu-sub-accordion {% if active == "users" or active == "roles" %}show{% endif %}">
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "users" %}active{% endif %}" href="/admin/users">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Users</span>
+                        </a>
+                    </div>
+                    <div class="menu-item">
+                        <a class="menu-link {% if active == "roles" %}active{% endif %}" href="/admin/roles">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span><span class="menu-title">Roles &amp; Permissions</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!--end::User Management-->
+            <div class="menu-item">
+                <a class="menu-link {% if active == "settings" %}active{% endif %}" href="/admin/settings">
+                    <span class="menu-icon"><i class="ki-duotone ki-setting-2 fs-3"><span class="path1"></span><span class="path2"></span></i></span>
+                    <span class="menu-title">Pengaturan</span>
+                </a>
+            </div>
+            {% endif %}
+            <!--end::Section: System-->
+
+        </div>
+    </div>
+    <!--end::Sidebar Menu-->
+
+    <!--begin::Sidebar Footer-->
+    <div class="px-6 py-5 mt-auto">
+        <div class="separator mb-4"></div>
+        <div class="d-flex align-items-center">
+            <div class="symbol symbol-35px me-3">
+                <img alt="Avatar" src="/assets/media/avatars/{{ user_avatar }}" />
+            </div>
+            <div class="d-flex flex-column flex-grow-1">
+                <span class="fw-bold fs-7 text-gray-800">{{ user_name }}</span>
+                <span class="text-muted fs-8">{{ user_role }}</span>
+            </div>
+        </div>
+    </div>
+    <!--end::Sidebar Footer-->
+</div>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WA Service — Gateway WhatsApp Multi-Session</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fff; --soft:#f4f7fb; --ink:#13131c; --ink2:#4b5260; --muted:#8b93a5; --line:#eaedf3;
+  --wa:#25d366; --primary:#15a85b; --primary2:#0e8a4a; --primary-soft:#e7f8ee; --dark:#10131b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.5}
+.mono{font-family:"JetBrains Mono",monospace}
+.ic{stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:8px}
+.shell{max-width:1180px;margin:0 auto;padding:0 28px}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:14.5px;border-radius:11px;padding:13px 20px;transition:.15s}
+.btn-pri{background:var(--primary);color:#fff;box-shadow:0 12px 26px rgba(21,168,91,.26)}
+.btn-pri:hover{background:var(--primary2);transform:translateY(-1px)}
+.btn-gh{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn-gh:hover{border-color:#d9dee7;background:#fafbfc}
+.btn .ic{width:18px;height:18px;stroke-width:2.2}
+
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav .in{display:flex;align-items:center;height:72px;gap:30px}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;font-size:17px;letter-spacing:-.01em}
+.logo .mk{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--wa),#10a85b);display:grid;place-items:center;box-shadow:0 6px 16px rgba(37,211,102,.32)}
+.logo .mk svg{width:22px;height:22px;stroke:#fff;stroke-width:2}
+.nav .menu{display:flex;gap:28px;margin-left:14px}
+.nav .menu a{font-size:14.5px;font-weight:500;color:var(--ink2)}
+.nav .menu a:hover{color:var(--ink)}
+.nav .right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.nav .right a.login{font-weight:600;font-size:14.5px}
+.navtoggle{display:none;background:var(--soft);border-radius:8px;padding:8px}
+
+.hero{position:relative;overflow:hidden;padding:74px 0 90px}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;background:
+  radial-gradient(800px 500px at 80% -5%,rgba(37,211,102,.12),transparent 60%),
+  radial-gradient(600px 500px at 8% 30%,rgba(114,57,234,.06),transparent 55%)}
+.hero .in{display:grid;grid-template-columns:1.05fr 1fr;gap:52px;align-items:center}
+.tagpill{display:inline-flex;align-items:center;gap:9px;background:var(--primary-soft);color:var(--primary2);font-weight:600;font-size:13px;padding:7px 14px;border-radius:30px}
+.tagpill i{width:7px;height:7px;border-radius:50%;background:var(--wa);box-shadow:0 0 0 3px rgba(37,211,102,.2)}
+.hero h1{font-size:52px;line-height:1.06;font-weight:900;letter-spacing:-.03em;margin-top:20px}
+.hero h1 .hl{color:var(--primary);position:relative}
+.hero p.lead{font-size:18px;color:var(--ink2);margin-top:22px;max-width:46ch;line-height:1.6}
+.hero .cta{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+.hero .trust{display:flex;align-items:center;gap:14px;margin-top:30px;color:var(--muted);font-size:13.5px}
+.hero .trust .av{display:flex}
+.hero .trust .av span{width:32px;height:32px;border-radius:50%;border:2.5px solid #fff;margin-left:-9px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700}
+.hero .trust .av span:first-child{margin-left:0}
+.av .a1{background:#7239ea}.av .a2{background:#2f7bf6}.av .a3{background:#f6a609}.av .a4{background:var(--primary)}
+
+.preview{position:relative}
+.win{background:#fff;border-radius:16px;box-shadow:0 40px 90px rgba(19,30,69,.16),0 0 0 1px var(--line);overflow:hidden}
+.win .bar{display:flex;align-items:center;gap:7px;padding:13px 16px;border-bottom:1px solid var(--line);background:#fbfcfd}
+.win .bar i{width:11px;height:11px;border-radius:50%;background:#e2e6ee}
+.win .bar i:nth-child(1){background:#ff6058}.win .bar i:nth-child(2){background:#ffbd2e}.win .bar i:nth-child(3){background:#28c840}
+.win .bar .url{margin-left:12px;background:#eef1f6;border-radius:7px;font-size:11.5px;color:var(--muted);padding:5px 12px;font-family:"JetBrains Mono",monospace}
+.win .body{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mini{background:var(--soft);border-radius:11px;padding:14px}
+.mini .lab{font-size:11px;color:var(--muted);font-weight:600}
+.mini .big{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+.mini .big small{font-size:13px;color:var(--muted)}
+.mini.full{grid-column:1/3;display:flex;flex-direction:column;gap:10px;padding:14px}
+.srow{display:flex;align-items:center;gap:11px}
+.srow .fl{width:30px;height:30px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.srow .nm{font-size:12.5px;font-weight:600}
+.srow .nm small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.srow .stt{margin-left:auto;font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-soft);padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:6px}
+.srow .stt i{width:6px;height:6px;border-radius:50%;background:var(--wa)}
+.float-qr{position:absolute;right:-26px;bottom:-26px;background:#fff;border-radius:14px;box-shadow:0 24px 50px rgba(19,30,69,.2);padding:14px;width:138px;text-align:center;animation:bob 5s ease-in-out infinite}
+.float-qr svg{width:100%;height:auto;display:block}
+.float-qr .cap{font-size:10.5px;color:var(--ink2);font-weight:600;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:5px}
+.float-qr .cap i{width:6px;height:6px;border-radius:50%;background:var(--wa)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft)}
+.strip .in{display:flex;align-items:center;justify-content:center;gap:46px;padding:22px 0;flex-wrap:wrap;color:var(--muted);font-weight:700;font-size:15px;letter-spacing:.02em}
+.strip .in span{opacity:.55}
+
+.sec{padding:88px 0}
+.sec-head{text-align:center;max-width:620px;margin:0 auto 50px}
+.sec-head .kick{color:var(--primary);font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.sec-head h2{font-size:38px;font-weight:800;letter-spacing:-.02em;margin-top:12px;line-height:1.12}
+.sec-head p{color:var(--ink2);font-size:16.5px;margin-top:14px}
+
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;transition:.18s}
+.feat:hover{box-shadow:0 18px 40px rgba(19,30,69,.08);transform:translateY(-3px);border-color:transparent}
+.feat .fi{width:50px;height:50px;border-radius:13px;display:grid;place-items:center;margin-bottom:18px}
+.feat .fi svg{width:24px;height:24px;stroke-width:2}
+.fi.g{background:var(--primary-soft);color:var(--primary)}
+.fi.p{background:#f0eafe;color:#7239ea}
+.fi.b{background:#e9f2ff;color:#2f7bf6}
+.fi.o{background:#fef3dd;color:#e09600}
+.fi.r{background:#fceaf0;color:#f1416c}
+.fi.t{background:#e6f7f4;color:#10968a}
+.feat h3{font-size:17.5px;font-weight:700;letter-spacing:-.01em}
+.feat p{color:var(--ink2);font-size:14.5px;margin-top:9px;line-height:1.6}
+
+.how{background:var(--dark);color:#fff}
+.how .sec-head h2{color:#fff}
+.how .sec-head p{color:#aab0c0}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative}
+.step{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:30px}
+.step .no{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;color:var(--wa);letter-spacing:.1em}
+.step .si{width:52px;height:52px;border-radius:13px;background:rgba(37,211,102,.14);color:var(--wa);display:grid;place-items:center;margin:16px 0 18px}
+.step .si svg{width:25px;height:25px;stroke-width:2}
+.step h3{font-size:18px;font-weight:700}
+.step p{color:#aab0c0;font-size:14.5px;margin-top:10px;line-height:1.6}
+
+.band{background:linear-gradient(135deg,#0e8a4a,#15a85b);color:#fff;position:relative;overflow:hidden}
+.band::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.1) 1px,transparent 1px);background-size:24px 24px;opacity:.5}
+.band .in{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:54px 0;text-align:center}
+.band .s .n{font-size:42px;font-weight:900;letter-spacing:-.02em}
+.band .s .l{font-size:14px;opacity:.9;margin-top:4px;font-weight:500}
+
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+.plan{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:30px;display:flex;flex-direction:column}
+.plan.hot{border-color:var(--primary);box-shadow:0 24px 50px rgba(21,168,91,.16);position:relative}
+.plan.hot::before{content:"PALING POPULER";position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:5px 14px;border-radius:20px}
+.plan .pn{font-size:16px;font-weight:700}
+.plan .pd{color:var(--muted);font-size:13.5px;margin-top:4px}
+.plan .pp{margin:20px 0 4px;font-size:38px;font-weight:900;letter-spacing:-.02em}
+.plan .pp small{font-size:15px;color:var(--muted);font-weight:600}
+.plan ul{list-style:none;margin:22px 0 24px;display:flex;flex-direction:column;gap:13px}
+.plan li{display:flex;align-items:flex-start;gap:11px;font-size:14px;color:var(--ink2)}
+.plan li svg{width:19px;height:19px;stroke:var(--primary);stroke-width:2.4;flex:none;margin-top:1px}
+.plan .pbtn{margin-top:auto;text-align:center;border-radius:11px;padding:13px;font-weight:700;font-size:14.5px;transition:.15s}
+.pbtn.solid{background:var(--primary);color:#fff;box-shadow:0 12px 26px rgba(21,168,91,.24)}
+.pbtn.solid:hover{background:var(--primary2)}
+.pbtn.ghost{background:var(--soft);color:var(--ink)}
+.pbtn.ghost:hover{background:#e9edf3}
+
+.cta-band{padding:86px 0}
+.cta-card{background:var(--dark);border-radius:24px;padding:60px;text-align:center;position:relative;overflow:hidden}
+.cta-card::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 50% -20%,rgba(37,211,102,.22),transparent 60%)}
+.cta-card h2{position:relative;color:#fff;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.12}
+.cta-card p{position:relative;color:#aab0c0;font-size:17px;margin-top:16px;max-width:50ch;margin-left:auto;margin-right:auto}
+.cta-card .row{position:relative;display:flex;gap:14px;justify-content:center;margin-top:30px;flex-wrap:wrap}
+.cta-card .btn-white{background:#fff;color:var(--dark)}
+.cta-card .btn-white:hover{background:#f0f2f5}
+
+.foot{border-top:1px solid var(--line);padding:54px 0 30px}
+.foot .top{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:30px}
+.foot .about{max-width:30ch;color:var(--ink2);font-size:14px;margin-top:16px;line-height:1.6}
+.foot .col h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);margin-bottom:16px}
+.foot .col a{display:block;color:var(--ink2);font-size:14px;margin-bottom:11px}
+.foot .col a:hover{color:var(--primary)}
+.foot .bottom{display:flex;justify-content:space-between;align-items:center;margin-top:44px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;flex-wrap:wrap;gap:12px}
+
+@media (max-width:980px){
+  .hero .in{grid-template-columns:1fr}.preview{order:-1;max-width:520px}
+  .feat-grid,.steps,.band .in{grid-template-columns:repeat(2,1fr)}
+  .price-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto}
+  .foot .top{grid-template-columns:1fr 1fr}
+  .nav .menu{display:none}.navtoggle{display:grid}
+}
+@media (max-width:560px){
+  .hero h1{font-size:38px}.sec-head h2,.cta-card h2,.how .sec-head h2{font-size:29px}
+  .feat-grid,.band .in,.foot .top{grid-template-columns:1fr}
+  .sec{padding:60px 0}.cta-card{padding:38px 24px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="shell in">
+    <a class="logo" href="/"><span class="mk"><svg viewBox="0 0 24 24"><path class="ic" d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 20 11.5Z"/></svg></span> WA Service</a>
+    <nav class="menu">
+      <a href="#fitur">Fitur</a><a href="#cara">Cara kerja</a><a href="#harga">Harga</a><a href="#">Dokumentasi</a>
+    </nav>
+    <div class="right">
+      <a class="login" href="/admin/login">Masuk</a>
+      <a class="btn btn-pri" href="/admin/register">Coba gratis</a>
+    </div>
+    <button class="navtoggle"><svg class="ic" style="width:22px;height:22px" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="shell in">
+    <div>
+      <span class="tagpill"><i></i> Ditenagai Baileys · tanpa WhatsApp Business API berbayar</span>
+      <h1>Satu gateway untuk <span class="hl">semua nomor</span> WhatsApp bisnismu.</h1>
+      <p class="lead">Hubungkan banyak nomor lewat scan QR, kelola subscriber, kirim broadcast, dan integrasikan ke sistemmu via API. Semua dari satu dashboard.</p>
+      <div class="cta">
+        <a class="btn btn-pri" href="/admin/register">Mulai gratis <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-gh" href="/admin/login"><svg class="ic" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></svg> Lihat demo</a>
+      </div>
+      <div class="trust">
+        <div class="av"><span class="a1">TB</span><span class="a2">HA</span><span class="a3">KS</span><span class="a4">+</span></div>
+        Dipakai 1.200+ nomor bisnis aktif
+      </div>
+    </div>
+
+    <div class="preview">
+      <div class="win">
+        <div class="bar"><i></i><i></i><i></i><span class="url">app.waservice.id/dashboard</span></div>
+        <div class="body">
+          <div class="mini"><div class="lab">SESI AKTIF</div><div class="big">5 <small>/ 10</small></div></div>
+          <div class="mini"><div class="lab">SUBSCRIBER</div><div class="big">1.284</div></div>
+          <div class="mini full">
+            <div class="srow"><span class="fl">TB</span><span class="nm">Toko Berkah Jaya<small class="mono">+62 812-9981</small></span><span class="stt"><i></i>Connected</span></div>
+            <div class="srow"><span class="fl">HA</span><span class="nm">Hijab Anindya<small class="mono">+62 877-4410</small></span><span class="stt"><i></i>Connected</span></div>
+            <div class="srow"><span class="fl">KS</span><span class="nm">Kopi Senja<small class="mono">+62 813-5567</small></span><span class="stt"><i></i>Connected</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="float-qr"><svg id="qr" viewBox="0 0 100 100"></svg><div class="cap"><i></i>Scan untuk tautkan</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip"><div class="shell in"><span>UMKM</span><span>E-Commerce</span><span>Agensi Marketing</span><span>SaaS</span><span>Komunitas</span></div></div>
+
+<section class="sec" id="fitur">
+  <div class="shell">
+    <div class="sec-head">
+      <div class="kick">Fitur</div>
+      <h2>Semua yang dibutuhkan untuk WhatsApp skala besar</h2>
+      <p>Dari pairing satu nomor sampai broadcast ribuan kontak, semuanya tertata dalam satu panel.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><div class="fi g"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3" class="ic"/><path d="M11 18h2" class="ic"/></svg></div><h3>Multi-session</h3><p>Jalankan puluhan nomor sekaligus, masing-masing dengan sesi terisolasi dan stabil.</p></div>
+      <div class="feat"><div class="fi b"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" class="ic"/><rect x="14" y="3" width="7" height="7" rx="1" class="ic"/><rect x="3" y="14" width="7" height="7" rx="1" class="ic"/><path d="M14 14h3v3M21 21v-4M14 21h3" class="ic"/></svg></div><h3>Pairing QR cepat</h3><p>Tautkan nomor baru dalam hitungan detik lewat scan QR, persis seperti WhatsApp Web.</p></div>
+      <div class="feat"><div class="fi p"><svg viewBox="0 0 24 24"><path d="M3 18a3 3 0 0 1 3 3M3 14a7 7 0 0 1 7 7M3 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" class="ic"/></svg></div><h3>Broadcast massal</h3><p>Kirim pesan ke ribuan subscriber dengan penjadwalan dan rotasi nomor anti-spam.</p></div>
+      <div class="feat"><div class="fi o"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6.1A8.4 8.4 0 1 1 21 11.5Z" class="ic"/></svg></div><h3>Auto-reply &amp; chatbot</h3><p>Balas otomatis berdasarkan kata kunci atau alur, tanpa harus standby 24 jam.</p></div>
+      <div class="feat"><div class="fi t"><svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="3.5" class="ic"/><path d="m10 13 8-8M15 5l3 3" class="ic"/></svg></div><h3>REST API &amp; Webhook</h3><p>Kirim dan terima pesan dari sistemmu sendiri lewat API sederhana dan webhook real-time.</p></div>
+      <div class="feat"><div class="fi r"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 3 4-6" class="ic"/></svg></div><h3>Analytics real-time</h3><p>Pantau keterkiriman, volume pesan, dan kesehatan tiap sesi dalam satu layar.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec how" id="cara">
+  <div class="shell">
+    <div class="sec-head">
+      <div class="kick" style="color:var(--wa)">Cara kerja</div>
+      <h2>Aktif dalam tiga langkah</h2>
+      <p>Tanpa setup ribet dan tanpa biaya API resmi WhatsApp.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="no">01</div><div class="si"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" class="ic"/><rect x="14" y="3" width="7" height="7" rx="1" class="ic"/><rect x="3" y="14" width="7" height="7" rx="1" class="ic"/><path d="M14 14h3v3M21 21v-4" class="ic"/></svg></div><h3>Hubungkan nomor</h3><p>Tambahkan sesi baru, scan QR dari HP, nomor langsung online di dashboard.</p></div>
+      <div class="step"><div class="no">02</div><div class="si"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" class="ic"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 5.2a3 3 0 0 1 0 5.6" class="ic"/></svg></div><h3>Atur subscriber &amp; pesan</h3><p>Kelola daftar kontak yang berlangganan, susun template, broadcast, dan auto-reply.</p></div>
+      <div class="step"><div class="no">03</div><div class="si"><svg viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" class="ic"/></svg></div><h3>Kirim &amp; pantau</h3><p>Lewat dashboard atau API. Lihat status terkirim dan kesehatan sesi secara live.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="band"><div class="shell in">
+  <div class="s"><div class="n">1.200+</div><div class="l">Nomor aktif</div></div>
+  <div class="s"><div class="n">8,6jt</div><div class="l">Pesan / bulan</div></div>
+  <div class="s"><div class="n">99,9%</div><div class="l">Uptime gateway</div></div>
+  <div class="s"><div class="n">&lt;2s</div><div class="l">Latensi kirim</div></div>
+</div></div>
+
+<section class="sec" id="harga">
+  <div class="shell">
+    <div class="sec-head">
+      <div class="kick">Harga</div>
+      <h2>Langganan sesuai skala bisnismu</h2>
+      <p>Mulai gratis untuk coba, naik kapan saja. Tanpa kontrak, bisa berhenti kapan pun.</p>
+    </div>
+    <div class="price-grid">
+      <div class="plan">
+        <div class="pn">Starter</div><div class="pd">Buat coba &amp; UMKM kecil</div>
+        <div class="pp">Rp99rb<small>/bln</small></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 2 nomor / sesi</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 500 subscriber</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Broadcast &amp; auto-reply</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Dukungan komunitas</li>
+        </ul>
+        <a class="pbtn ghost" href="/admin/register">Pilih Starter</a>
+      </div>
+      <div class="plan hot">
+        <div class="pn">Pro</div><div class="pd">Buat bisnis yang berkembang</div>
+        <div class="pp">Rp299rb<small>/bln</small></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 10 nomor / sesi</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Subscriber tak terbatas</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> REST API + webhook</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Analytics &amp; penjadwalan</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Prioritas dukungan</li>
+        </ul>
+        <a class="pbtn solid" href="/admin/register">Pilih Pro</a>
+      </div>
+      <div class="plan">
+        <div class="pn">Business</div><div class="pd">Buat agensi &amp; volume tinggi</div>
+        <div class="pp">Rp799rb<small>/bln</small></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> 50 nomor / sesi</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Multi-user &amp; peran tim</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Server &amp; rate limit khusus</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> SLA &amp; manajer akun</li>
+        </ul>
+        <a class="pbtn ghost" href="/admin/register">Hubungi sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band"><div class="shell"><div class="cta-card">
+  <h2>Siap otomatisasi WhatsApp bisnismu?</h2>
+  <p>Hubungkan nomor pertamamu dalam 2 menit. Gratis 14 hari, tanpa kartu kredit.</p>
+  <div class="row">
+    <a class="btn btn-white" href="/admin/register">Mulai gratis <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <a class="btn btn-gh" href="#" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.25)">Lihat dokumentasi</a>
+  </div>
+</div></div></section>
+
+<footer class="foot"><div class="shell">
+  <div class="top">
+    <div>
+      <a class="logo" href="/"><span class="mk"><svg viewBox="0 0 24 24"><path class="ic" d="M20 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 20 11.5Z"/></svg></span> WA Service</a>
+      <p class="about">Gateway WhatsApp multi-session untuk bisnis, ditenagai Baileys. Hubungkan, kelola, dan otomatisasi dari satu tempat.</p>
+    </div>
+    <div class="col"><h4>Produk</h4><a href="#fitur">Fitur</a><a href="#harga">Harga</a><a href="#">Changelog</a><a href="#">Status</a></div>
+    <div class="col"><h4>Developer</h4><a href="#">Dokumentasi API</a><a href="#">Webhook</a><a href="#">SDK</a><a href="#">Postman</a></div>
+    <div class="col"><h4>Perusahaan</h4><a href="#">Tentang</a><a href="#">Kontak</a><a href="#">Kebijakan privasi</a><a href="#">Syarat layanan</a></div>
+  </div>
+  <div class="bottom"><div>© 2026 WA Service. Tidak berafiliasi dengan WhatsApp/Meta.</div><div>Dibuat di Medan, Indonesia 🇮🇩</div></div>
+</div></footer>
+
+<script>
+(function(){
+  var N=21,cell=100/N,s='';
+  function f(x,y){s+='<rect x="'+x*cell+'" y="'+y*cell+'" width="'+7*cell+'" height="'+7*cell+'" rx="'+cell+'" fill="#111"/>';s+='<rect x="'+(x+1)*cell+'" y="'+(y+1)*cell+'" width="'+5*cell+'" height="'+5*cell+'" rx="'+cell*.7+'" fill="#fff"/>';s+='<rect x="'+(x+2)*cell+'" y="'+(y+2)*cell+'" width="'+3*cell+'" height="'+3*cell+'" rx="'+cell*.5+'" fill="#111"/>';}
+  function inF(c,r){return (c<8&&r<8)||(c>N-9&&r<8)||(c<8&&r>N-9);}
+  for(var r=0;r<N;r++)for(var c=0;c<N;c++){if(inF(c,r))continue;if(Math.random()>.52)s+='<rect x="'+c*cell+'" y="'+r*cell+'" width="'+cell+'" height="'+cell+'" rx="'+cell*.25+'" fill="#111"/>';}
+  f(0,0);f(N-7,0);f(0,N-7);
+  document.getElementById('qr').innerHTML=s;
+})();
+</script>
+</body>
+</html>
