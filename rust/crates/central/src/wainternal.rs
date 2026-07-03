@@ -91,8 +91,9 @@ pub async fn event(
             .bind(Uuid::now_v7()).bind(sid).bind(remote).bind(body).bind(mtype).bind(murl).bind(mmime).bind(mname).bind(waid)
             .execute(pool).await;
             crate::quota::bump(pool, sid, "received").await;
-            // AI auto-reply (non-blocking; cek config + guardrail di dalam).
-            tokio::spawn(crate::ai_pipeline::maybe_reply(state.clone(), sid, remote.to_string()));
+            // Balas otomatis (non-blocking): keyword rule dulu, lalu AI. Guardrail di dalam.
+            let incoming = body.unwrap_or("").to_string();
+            tokio::spawn(crate::autoreply::handle(state.clone(), sid, remote.to_string(), incoming));
         }
         "sent" => {
             // hasil kirim keluar dari antrian throttle sidecar

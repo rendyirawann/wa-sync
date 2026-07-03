@@ -85,6 +85,7 @@ pub async fn ensure(pool: &PgPool) {
     let extras: &[(&str, &str, &str, &str, &str, Option<&str>, i32)] = &[
         ("Sistem", "Master Plan", "card", "/admin/plans", "plans", Some("view_resources"), 115),
         ("Menu", "Kontak", "users", "/admin/wa/contacts", "contacts", None, 55),
+        ("Menu", "Auto-reply", "bolt", "/admin/wa/autoreply", "autoreply", None, 56),
     ];
     for &(section, label, icon, url, active_key, permission, sort) in extras {
         let _ = sqlx::query(

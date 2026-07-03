@@ -9,8 +9,8 @@ pub async fn maybe_reply(state: AppState, session_id: Uuid, remote_jid: String) 
     if remote_jid.ends_with("@g.us") {
         return; // grup tidak dibalas (jaga-jaga)
     }
-    let cfg: Option<(bool, String, String, i32, Uuid, i16, i16)> = sqlx::query_as(
-        "SELECT ai_enabled, ai_model, ai_system_prompt, ai_history_limit, user_id, ai_hours_start, ai_hours_end \
+    let cfg: Option<(bool, String, String, i32, Uuid, i16, i16, i32)> = sqlx::query_as(
+        "SELECT ai_enabled, ai_model, ai_system_prompt, ai_history_limit, user_id, ai_hours_start, ai_hours_end, ai_only_when_idle_min \
          FROM wa_sessions WHERE id = $1 AND status = 'connected'",
     )
     .bind(session_id)
@@ -18,9 +18,27 @@ pub async fn maybe_reply(state: AppState, session_id: Uuid, remote_jid: String) 
     .await
     .ok()
     .flatten();
-    let Some((enabled, model, sys, hist, uid, hstart, hend)) = cfg else { return };
+    let Some((enabled, model, sys, hist, uid, hstart, hend, idle_min)) = cfg else { return };
     if !enabled {
         return;
+    }
+    // Human handoff: kalau AI dijeda untuk kontak ini (mis. sedang ditangani agen), lewati.
+    let paused: Option<bool> = sqlx::query_scalar("SELECT ai_paused FROM wa_contacts WHERE session_id=$1 AND jid=$2")
+        .bind(session_id).bind(&remote_jid).fetch_optional(&state.pool).await.ok().flatten();
+    if paused == Some(true) {
+        return;
+    }
+    // "Hanya saat idle": kalau agen (manusia) baru saja membalas (< N menit), jangan ganggu.
+    if idle_min > 0 {
+        let recent: Option<i32> = sqlx::query_scalar(
+            "SELECT 1 FROM wa_messages WHERE session_id=$1 AND remote_jid=$2 AND direction='out' \
+             AND via_ai=false AND created_at > now() - make_interval(mins => $3::int) LIMIT 1",
+        )
+        .bind(session_id).bind(&remote_jid).bind(idle_min)
+        .fetch_optional(&state.pool).await.ok().flatten();
+        if recent.is_some() {
+            return;
+        }
     }
     // AI hanya untuk plan yang mengizinkan (Premium/Enterprise) — Superadmin (pemilik platform) bypass.
     let is_super: bool = sqlx::query_scalar(

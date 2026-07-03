@@ -1,0 +1,98 @@
+{% extends "layout/wa.html" %}
+{% block title %}Auto-reply{% endblock %}
+{% block page_title %}Auto-reply Keyword{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <b>Auto-reply</b>{% endblock %}
+
+{% block style %}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{padding:16px 20px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15px;font-weight:700}.panel .ph .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.bd{padding:18px 20px}
+.flbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin:12px 0 5px}
+.flbl:first-child{margin-top:0}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+.inp:focus{border-color:var(--primary)}
+textarea.inp{resize:vertical;line-height:1.5}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:11px 20px;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px 20px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.kw{font-weight:700}.mt{font-size:11px;color:var(--muted)}
+.rep{color:var(--ink2);font-size:12.5px}
+.sess{font-size:11px;color:var(--primary)}
+.del{background:none;border:none;color:var(--danger);font-weight:600;font-size:12px;cursor:pointer}
+.empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+.note{background:#fff8e9;border:1px dashed #e6c66b;color:#8a6d1f;border-radius:10px;padding:11px 13px;font-size:12px;margin-bottom:14px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="note">💡 Auto-reply <b>keyword</b> membalas instan tanpa AI (hemat & pasti). Bila tak ada keyword yang cocok, barulah <b>AI</b> (jika aktif) yang menjawab.</div>
+  <div class="grid">
+    <div class="panel">
+      <div class="ph"><h3>Tambah Aturan</h3><div class="sub">Balas otomatis saat pesan cocok keyword.</div></div>
+      <div class="bd">
+        {% if sessions | length == 0 %}
+          <div class="empty">Belum ada nomor. Tautkan nomor dulu.</div>
+        {% else %}
+        <form method="post" action="/admin/wa/autoreply/create">
+          <input type="hidden" name="_token" value="{{ csrf_token }}">
+          <label class="flbl">Nomor</label>
+          <select name="session_id" class="inp" required>
+            {% for s in sessions %}<option value="{{ s.id }}">{{ s.label }}{% if s.phone %} (+{{ s.phone }}){% endif %}</option>{% endfor %}
+          </select>
+          <label class="flbl">Keyword</label>
+          <input name="keyword" class="inp" placeholder="mis. harga" required>
+          <label class="flbl">Kecocokan</label>
+          <select name="match_type" class="inp">
+            <option value="contains">Mengandung kata</option>
+            <option value="exact">Sama persis</option>
+            <option value="starts">Diawali kata</option>
+          </select>
+          <label class="flbl">Balasan</label>
+          <textarea name="reply" class="inp" rows="4" placeholder="mis. Harga produk kami mulai Rp50.000. Ketik 'menu' untuk daftar lengkap." required></textarea>
+          <button type="submit" class="btn btn-pri" style="width:100%;margin-top:16px">Tambah Aturan</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h3>Daftar Aturan</h3><div class="sub">Dicek urut atas ke bawah; yang pertama cocok yang dipakai.</div></div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead><tr><th>Keyword</th><th>Balasan</th><th>Nomor</th><th></th></tr></thead>
+          <tbody>
+            {% for r in rules %}
+            <tr data-id="{{ r.id }}">
+              <td><span class="kw">{{ r.keyword }}</span><div class="mt">{{ r.match_type }}{% if not r.enabled %} · nonaktif{% endif %}</div></td>
+              <td class="rep">{{ r.reply | truncate(length=90) }}</td>
+              <td class="sess">{{ r.session_label }}</td>
+              <td><button class="del" data-id="{{ r.id }}">Hapus</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if rules | length == 0 %}<div class="empty">Belum ada aturan auto-reply.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var CSRF="{{ csrf_token }}";
+  document.querySelectorAll('.del').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(!confirm('Hapus aturan ini?')) return;
+      fetch('/admin/wa/autoreply/'+b.getAttribute('data-id'),{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}})
+        .then(function(){ var tr=b.closest('tr'); if(tr) tr.remove(); });
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -49,7 +49,7 @@ textarea.inp{resize:vertical;line-height:1.5}
   <div class="inbox">
     <div class="conv-list" id="convList">
       {% for c in conversations %}
-      <div class="conv" data-session="{{ c.session_id }}" data-jid="{{ c.jid }}" data-phone="{{ c.phone }}" data-name="{{ c.name }}" data-persona="{{ c.persona }}">
+      <div class="conv" data-session="{{ c.session_id }}" data-jid="{{ c.jid }}" data-phone="{{ c.phone }}" data-name="{{ c.name }}" data-persona="{{ c.persona }}" data-paused="{{ c.ai_paused }}">
         <div class="av">{% if c.name %}{{ c.name | truncate(length=2, end="") }}{% else %}{{ c.phone | truncate(length=2, end="") }}{% endif %}</div>
         <div class="meta">
           <div class="top"><span class="nm">{% if c.name %}{{ c.name }}{% else %}+{{ c.phone }}{% endif %}</span><span class="tm">{{ c.when }}</span></div>
@@ -104,12 +104,23 @@ textarea.inp{resize:vertical;line-height:1.5}
   function bubble(m){var b=document.createElement('div');b.className='bubble '+(m.direction==='in'?'in':'out');var cap=m.body?('<div>'+esc(m.body)+'</div>'):'';b.innerHTML=mediaHtml(m)+cap+'<div class="t">'+esc(m.when||'')+'</div>';return b;}
   function renderHead(){
     var nm = cur.name ? (esc(cur.name)+' <span style="font-weight:500;color:var(--muted);font-size:12.5px">+'+esc(cur.phone)+'</span>') : ('+'+esc(cur.phone));
-    var tag = cur.persona ? ' <span style="font-size:11px;font-weight:700;color:#7a5af0;background:#efeaff;padding:2px 8px;border-radius:12px">💕 persona khusus</span>' : '';
-    head.innerHTML='<div>'+nm+tag+'</div><div class="hact">'+
+    var tag = cur.persona ? ' <span style="font-size:11px;font-weight:700;color:#7a5af0;background:#efeaff;padding:2px 8px;border-radius:12px">💕 persona</span>' : '';
+    var pausedTag = cur.paused ? ' <span style="font-size:11px;font-weight:700;color:#b9790a;background:var(--warn-soft);padding:2px 8px;border-radius:12px">⏸️ AI dijeda</span>' : '';
+    head.innerHTML='<div>'+nm+tag+pausedTag+'</div><div class="hact">'+
+      '<button class="hbtn" id="btnAi">'+(cur.paused?'▶️ Lanjutkan AI':'⏸️ Jeda AI')+'</button>'+
       '<button class="hbtn" id="btnContact">⚙️ Atur kontak</button>'+
-      '<button class="hbtn" id="btnResend">🔄 Kirim ulang balasan</button></div>';
+      '<button class="hbtn" id="btnResend">🔄 Kirim ulang</button></div>';
+    document.getElementById('btnAi').addEventListener('click',aiToggle);
     document.getElementById('btnContact').addEventListener('click',openContact);
     document.getElementById('btnResend').addEventListener('click',resend);
+  }
+  function setConvPaused(v){ var c=document.querySelector('.conv[data-jid="'+CSS.escape(cur.jid)+'"]'); if(c) c.setAttribute('data-paused', v?'true':'false'); }
+  function aiToggle(){
+    var next=!cur.paused;
+    post('/admin/wa/messages/ai-toggle',{session_id:cur.session,jid:cur.jid,pause:next?'1':'0',_token:CSRF}).then(function(j){
+      if(j.status==='ok'){ cur.paused=j.ai_paused; renderHead(); setConvPaused(cur.paused); }
+      else alert('Gagal ubah status AI');
+    }).catch(function(){alert('Error jaringan');});
   }
   function openContact(){
     document.getElementById('cContactPhone').textContent='Nomor +'+cur.phone;
@@ -134,8 +145,8 @@ textarea.inp{resize:vertical;line-height:1.5}
       else alert('Gagal kirim ulang: '+(j.message||''));
     }).catch(function(){alert('Error jaringan');});
   }
-  function loadThread(session,jid,phone,name,persona){
-    cur={session:session,jid:jid,phone:phone,name:name||'',persona:persona||''};
+  function loadThread(session,jid,phone,name,persona,paused){
+    cur={session:session,jid:jid,phone:phone,name:name||'',persona:persona||'',paused:(paused==='true'||paused===true)};
     renderHead(); form.style.display='flex';
     thread.innerHTML='<div class="empty-conv">Memuat…</div>';
     fetch('/admin/wa/messages/thread?session='+encodeURIComponent(session)+'&jid='+encodeURIComponent(jid),{credentials:'same-origin'})
@@ -148,7 +159,7 @@ textarea.inp{resize:vertical;line-height:1.5}
   document.querySelectorAll('.conv').forEach(function(c){
     c.addEventListener('click',function(){
       document.querySelectorAll('.conv').forEach(function(x){x.classList.remove('active');}); c.classList.add('active');
-      loadThread(c.getAttribute('data-session'),c.getAttribute('data-jid'),c.getAttribute('data-phone'),c.getAttribute('data-name'),c.getAttribute('data-persona'));
+      loadThread(c.getAttribute('data-session'),c.getAttribute('data-jid'),c.getAttribute('data-phone'),c.getAttribute('data-name'),c.getAttribute('data-persona'),c.getAttribute('data-paused'));
     });
   });
   form.addEventListener('submit',function(e){
@@ -156,7 +167,7 @@ textarea.inp{resize:vertical;line-height:1.5}
     var body=new URLSearchParams({session_id:cur.session,to:cur.jid,text:txt,_token:CSRF});
     fetch('/admin/wa/messages/send',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
       .then(function(r){return r.json();}).then(function(j){
-        if(j.status==='queued'){ var em=thread.querySelector('.empty-conv'); if(em)em.remove(); thread.appendChild(bubble({direction:'out',body:txt,when:'mengirim…'})); thread.scrollTop=thread.scrollHeight; inp.value=''; }
+        if(j.status==='queued'){ var em=thread.querySelector('.empty-conv'); if(em)em.remove(); thread.appendChild(bubble({direction:'out',body:txt,when:'mengirim…'})); thread.scrollTop=thread.scrollHeight; inp.value=''; if(!cur.paused){ cur.paused=true; renderHead(); setConvPaused(true); } }
         else alert('Gagal kirim: '+(j.message||''));
       }).catch(function(){alert('Error jaringan');});
   });

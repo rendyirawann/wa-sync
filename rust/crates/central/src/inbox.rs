@@ -16,12 +16,12 @@ use tower_sessions::Session;
 use crate::{auth, rbac::CurrentUser, view, AppState};
 
 const CONV_ALL: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text') \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false) \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     ORDER BY m.session_id, m.remote_jid, m.created_at DESC";
 const CONV_OWN: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text') \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false) \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     WHERE s.user_id = $1 \
@@ -55,7 +55,7 @@ async fn owns_session(state: &AppState, user: &CurrentUser, sid: Uuid) -> bool {
 }
 
 pub async fn index(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
-    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String, String)> = if user.is_superadmin() {
+    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String, String, bool)> = if user.is_superadmin() {
         sqlx::query_as(CONV_ALL).fetch_all(&state.pool).await.unwrap_or_default()
     } else {
         sqlx::query_as(CONV_OWN).bind(user.id).fetch_all(&state.pool).await.unwrap_or_default()
@@ -72,6 +72,7 @@ pub async fn index(user: CurrentUser, session: Session, State(state): State<AppS
             "last": last_label(&r.2.clone().unwrap_or_default(), &r.8),
             "when": r.3.clone().unwrap_or_default(),
             "session_label": r.4,
+            "ai_paused": r.9,
         })
     }).collect();
 
@@ -135,10 +136,46 @@ pub async fn send(user: CurrentUser, session: Session, State(state): State<AppSt
             return (StatusCode::TOO_MANY_REQUESTS, Json(json!({ "status": "error", "message": "Kuota pesan harian habis. Upgrade plan." }))).into_response();
         }
     }
+    // Human handoff: agen membalas manual → jeda AI untuk kontak ini (bisa diaktifkan lagi via toggle).
+    let _ = sqlx::query(
+        "INSERT INTO wa_contacts (session_id, jid, ai_paused, updated_at) VALUES ($1,$2,true,now()) \
+         ON CONFLICT (session_id, jid) DO UPDATE SET ai_paused=true, updated_at=now()",
+    )
+    .bind(sid).bind(&f.to).execute(&state.pool).await;
     match state.wa.send(&sid.to_string(), &f.to, &f.text).await {
-        Ok(_) => Json(json!({ "status": "queued" })).into_response(),
+        Ok(_) => Json(json!({ "status": "queued", "ai_paused": true })).into_response(),
         Err(e) => (StatusCode::BAD_GATEWAY, Json(json!({ "status": "error", "message": e.to_string() }))).into_response(),
     }
+}
+
+#[derive(Deserialize)]
+pub struct AiToggleForm {
+    session_id: String,
+    jid: String,
+    #[serde(default)]
+    pause: String,
+    #[serde(rename = "_token", default)]
+    token: String,
+}
+
+/// Jeda / lanjutkan AI untuk satu percakapan (human handoff).
+pub async fn ai_toggle(user: CurrentUser, session: Session, State(state): State<AppState>, Form(f): Form<AiToggleForm>) -> Response {
+    if !auth::verify_csrf(&session, &f.token).await {
+        return (StatusCode::from_u16(419).unwrap(), "Sesi kedaluwarsa").into_response();
+    }
+    let Ok(sid) = Uuid::parse_str(&f.session_id) else {
+        return (StatusCode::BAD_REQUEST, "bad session").into_response();
+    };
+    if !owns_session(&state, &user, sid).await {
+        return (StatusCode::NOT_FOUND, "not found").into_response();
+    }
+    let paused = matches!(f.pause.as_str(), "1" | "true" | "on");
+    let _ = sqlx::query(
+        "INSERT INTO wa_contacts (session_id, jid, ai_paused, updated_at) VALUES ($1,$2,$3,now()) \
+         ON CONFLICT (session_id, jid) DO UPDATE SET ai_paused=EXCLUDED.ai_paused, updated_at=now()",
+    )
+    .bind(sid).bind(f.jid.trim()).bind(paused).execute(&state.pool).await;
+    Json(json!({ "status": "ok", "ai_paused": paused })).into_response()
 }
 
 #[derive(Deserialize)]

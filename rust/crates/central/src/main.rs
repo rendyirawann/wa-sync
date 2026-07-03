@@ -3,6 +3,7 @@ mod ai;
 mod ai_pipeline;
 mod auth;
 mod authextra;
+mod autoreply;
 mod ban;
 mod billing;
 mod broadcast;
@@ -215,9 +216,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/messages/send", post(inbox::send))
         .route("/admin/wa/messages/resend", post(inbox::resend))
         .route("/admin/wa/messages/contact", post(inbox::set_contact))
+        .route("/admin/wa/messages/ai-toggle", post(inbox::ai_toggle))
         // --- Kontak / CRM (Fase Batch 2) ---
         .route("/admin/wa/contacts", get(contacts::index))
         .route("/admin/wa/contacts/save", post(contacts::save))
+        // --- Auto-reply keyword (Batch 3) ---
+        .route("/admin/wa/autoreply", get(autoreply::index).post(autoreply::create))
+        .route("/admin/wa/autoreply/create", post(autoreply::create))
+        .route("/admin/wa/autoreply/{id}", axum::routing::delete(autoreply::destroy))
         .route("/admin/wa/api-keys", get(wa::api_keys))
         .route("/admin/wa/webhooks", get(wa::webhooks))
         // --- Billing & Plan (Fase P5, Midtrans) ---

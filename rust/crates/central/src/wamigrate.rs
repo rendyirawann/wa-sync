@@ -179,6 +179,18 @@ const STMTS: &[&str] = &[
     "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_url text",
     "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_mime text",
     "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_name text",
+    // Batch 3: auto-reply keyword (rule-based) + human handoff (pause AI per-kontak).
+    "CREATE TABLE IF NOT EXISTS wa_autoreply (\
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(), \
+        session_id uuid NOT NULL REFERENCES wa_sessions(id) ON DELETE CASCADE, \
+        keyword text NOT NULL, \
+        match_type text NOT NULL DEFAULT 'contains' CHECK (match_type IN ('contains','exact','starts')), \
+        reply text NOT NULL DEFAULT '', \
+        enabled boolean NOT NULL DEFAULT true, \
+        sort_order int NOT NULL DEFAULT 0, \
+        created_at timestamptz NOT NULL DEFAULT now())",
+    "CREATE INDEX IF NOT EXISTS idx_wa_autoreply_session ON wa_autoreply (session_id)",
+    "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS ai_paused boolean NOT NULL DEFAULT false",
 ];
 
 pub async fn run(pool: &PgPool) -> anyhow::Result<()> {
