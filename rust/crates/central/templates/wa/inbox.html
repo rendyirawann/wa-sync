@@ -25,6 +25,8 @@
 .bubble.in{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
 .bubble.out{background:var(--primary-soft);align-self:flex-end;border-bottom-right-radius:4px}
 .bubble .t{font-size:10.5px;color:var(--muted);margin-top:3px;text-align:right}
+.rmedia{max-width:220px;max-height:260px;border-radius:9px;display:block;margin-bottom:4px;cursor:pointer}
+.rdoc{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:inherit;font-weight:600;font-size:12.5px;background:rgba(0,0,0,.05);padding:8px 11px;border-radius:9px;margin-bottom:4px}
 .reply{display:flex;gap:10px;padding:14px 16px;border-top:1px solid var(--line)}
 .reply input{flex:1;border:1px solid var(--line);border-radius:9px;padding:11px 14px;outline:none;font-family:inherit;font-size:14px}
 .reply input:focus{border-color:var(--primary)}
@@ -91,7 +93,15 @@ textarea.inp{resize:vertical;line-height:1.5}
   var thread=document.getElementById('thread'), head=document.getElementById('threadHead'), form=document.getElementById('replyForm');
   function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
   function post(url,obj){return fetch(url,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(obj)}).then(function(r){return r.json();});}
-  function bubble(m){var b=document.createElement('div');b.className='bubble '+(m.direction==='in'?'in':'out');b.innerHTML=esc(m.body)+'<div class="t">'+esc(m.when||'')+'</div>';return b;}
+  function mediaHtml(m){
+    var url=m.media||''; if(!url) return ''; var t=m.type||'';
+    if(t==='image'||t==='sticker') return '<a href="'+esc(url)+'" target="_blank"><img class="rmedia" src="'+esc(url)+'" alt="media"></a>';
+    if(t==='video') return '<video class="rmedia" src="'+esc(url)+'" controls></video>';
+    if(t==='audio') return '<audio src="'+esc(url)+'" controls style="max-width:220px;display:block;margin-bottom:4px"></audio>';
+    if(t==='document') return '<a class="rdoc" href="'+esc(url)+'" target="_blank">📄 '+esc(m.name||'Dokumen')+'</a>';
+    return '';
+  }
+  function bubble(m){var b=document.createElement('div');b.className='bubble '+(m.direction==='in'?'in':'out');var cap=m.body?('<div>'+esc(m.body)+'</div>'):'';b.innerHTML=mediaHtml(m)+cap+'<div class="t">'+esc(m.when||'')+'</div>';return b;}
   function renderHead(){
     var nm = cur.name ? (esc(cur.name)+' <span style="font-weight:500;color:var(--muted);font-size:12.5px">+'+esc(cur.phone)+'</span>') : ('+'+esc(cur.phone));
     var tag = cur.persona ? ' <span style="font-size:11px;font-weight:700;color:#7a5af0;background:#efeaff;padding:2px 8px;border-radius:12px">💕 persona khusus</span>' : '';
@@ -154,7 +164,7 @@ textarea.inp{resize:vertical;line-height:1.5}
   window.addEventListener('wa-event',function(e){
     var d=e.detail||{}; if(!cur.session||d.session_id!==cur.session) return;
     var data=d.data||{};
-    if(d.event==='message' && (data.remote_jid||'')===cur.jid){ var em=thread.querySelector('.empty-conv'); if(em)em.remove(); thread.appendChild(bubble({direction:'in',body:data.body,when:'baru saja'})); thread.scrollTop=thread.scrollHeight; }
+    if(d.event==='message' && (data.remote_jid||'')===cur.jid){ var em=thread.querySelector('.empty-conv'); if(em)em.remove(); thread.appendChild(bubble({direction:'in',body:data.body,type:data.msg_type,media:data.media_url,name:data.media_name,when:'baru saja'})); thread.scrollTop=thread.scrollHeight; }
   });
 })();
 </script>

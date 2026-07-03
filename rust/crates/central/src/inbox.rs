@@ -16,16 +16,32 @@ use tower_sessions::Session;
 use crate::{auth, rbac::CurrentUser, view, AppState};
 
 const CONV_ALL: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,'') \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text') \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     ORDER BY m.session_id, m.remote_jid, m.created_at DESC";
 const CONV_OWN: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,'') \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text') \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     WHERE s.user_id = $1 \
     ORDER BY m.session_id, m.remote_jid, m.created_at DESC";
+
+/// Label ringkas pesan terakhir (untuk daftar percakapan): pakai body, atau ikon media bila kosong.
+fn last_label(body: &str, mtype: &str) -> String {
+    if !body.trim().is_empty() {
+        return body.to_string();
+    }
+    match mtype {
+        "image" => "📷 Foto",
+        "video" => "🎬 Video",
+        "document" => "📄 Dokumen",
+        "audio" => "🎵 Pesan suara",
+        "sticker" => "🌟 Stiker",
+        _ => "",
+    }
+    .to_string()
+}
 
 async fn owns_session(state: &AppState, user: &CurrentUser, sid: Uuid) -> bool {
     let found: Option<(Uuid,)> = if user.is_superadmin() {
@@ -39,7 +55,7 @@ async fn owns_session(state: &AppState, user: &CurrentUser, sid: Uuid) -> bool {
 }
 
 pub async fn index(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
-    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String)> = if user.is_superadmin() {
+    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String, String)> = if user.is_superadmin() {
         sqlx::query_as(CONV_ALL).fetch_all(&state.pool).await.unwrap_or_default()
     } else {
         sqlx::query_as(CONV_OWN).bind(user.id).fetch_all(&state.pool).await.unwrap_or_default()
@@ -53,7 +69,7 @@ pub async fn index(user: CurrentUser, session: Session, State(state): State<AppS
             "phone": phone,
             "name": r.6,
             "persona": r.7,
-            "last": r.2.clone().unwrap_or_default(),
+            "last": last_label(&r.2.clone().unwrap_or_default(), &r.8),
             "when": r.3.clone().unwrap_or_default(),
             "session_label": r.4,
         })
@@ -76,13 +92,14 @@ pub async fn thread(user: CurrentUser, State(state): State<AppState>, Query(q): 
         return (StatusCode::NOT_FOUND, "not found").into_response();
     }
     let jid = q.get("jid").cloned().unwrap_or_default();
-    let rows: Vec<(String, Option<String>, Option<String>, String)> = sqlx::query_as(
-        "SELECT direction, body, to_char(created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), status \
+    let rows: Vec<(String, Option<String>, String, String, String, Option<String>)> = sqlx::query_as(
+        "SELECT direction, body, to_char(created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), status, COALESCE(msg_type,'text'), media_url \
          FROM wa_messages WHERE session_id=$1 AND remote_jid=$2 ORDER BY created_at ASC LIMIT 300",
     )
     .bind(sid).bind(&jid).fetch_all(&state.pool).await.unwrap_or_default();
     let msgs: Vec<_> = rows.iter().map(|r| json!({
-        "direction": r.0, "body": r.1.clone().unwrap_or_default(), "when": r.2, "status": r.3
+        "direction": r.0, "body": r.1.clone().unwrap_or_default(), "when": r.2, "status": r.3,
+        "type": r.4, "media": r.5.clone().unwrap_or_default()
     })).collect();
     Json(json!({ "messages": msgs })).into_response()
 }

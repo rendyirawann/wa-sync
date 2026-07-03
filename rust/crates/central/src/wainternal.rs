@@ -79,12 +79,16 @@ pub async fn event(
             let remote = ev.data.get("remote_jid").and_then(Value::as_str).unwrap_or("");
             let body = ev.data.get("body").and_then(Value::as_str);
             let waid = ev.data.get("wa_msg_id").and_then(Value::as_str);
+            let mtype = ev.data.get("msg_type").and_then(Value::as_str).unwrap_or("text");
+            let murl = ev.data.get("media_url").and_then(Value::as_str);
+            let mmime = ev.data.get("media_mime").and_then(Value::as_str);
+            let mname = ev.data.get("media_name").and_then(Value::as_str);
             let _ = sqlx::query(
-                "INSERT INTO wa_messages (id, session_id, direction, remote_jid, body, msg_type, wa_message_id, status) \
-                 VALUES ($1,$2,'in',$3,$4,'text',$5,'received') \
+                "INSERT INTO wa_messages (id, session_id, direction, remote_jid, body, msg_type, media_url, media_mime, media_name, wa_message_id, status) \
+                 VALUES ($1,$2,'in',$3,$4,$5,$6,$7,$8,$9,'received') \
                  ON CONFLICT (session_id, wa_message_id) WHERE wa_message_id IS NOT NULL DO NOTHING",
             )
-            .bind(Uuid::now_v7()).bind(sid).bind(remote).bind(body).bind(waid)
+            .bind(Uuid::now_v7()).bind(sid).bind(remote).bind(body).bind(mtype).bind(murl).bind(mmime).bind(mname).bind(waid)
             .execute(pool).await;
             crate::quota::bump(pool, sid, "received").await;
             // AI auto-reply (non-blocking; cek config + guardrail di dalam).

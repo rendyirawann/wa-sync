@@ -1,0 +1,108 @@
+{% extends "layout/wa.html" %}
+{% block title %}Kontak{% endblock %}
+{% block page_title %}Kontak &amp; CRM{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <b>Kontak</b>{% endblock %}
+
+{% block style %}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.panel .ph h3{font-size:15.5px;font-weight:700}.panel .ph .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.tags-filter{display:flex;gap:7px;flex-wrap:wrap;padding:12px 22px;border-bottom:1px solid var(--line)}
+.tagchip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;text-decoration:none;background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
+.tagchip.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:12px 22px;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px 22px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:#fafbfc}
+.tg{display:inline-block;font-size:11px;font-weight:600;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:12px;margin:1px 2px}
+.muted{color:var(--muted);font-size:12px}
+.linkbtn{border:1px solid var(--line);background:var(--card);color:var(--ink2);font-weight:600;font-size:12px;border-radius:8px;padding:6px 10px;cursor:pointer;text-decoration:none}
+.linkbtn:hover{border-color:var(--primary);color:var(--primary)}
+.empty{padding:36px;text-align:center;color:var(--muted);font-size:13.5px}
+.modal{position:fixed;inset:0;background:rgba(10,12,20,.55);display:none;place-items:center;z-index:200;padding:16px}
+.modal.open{display:grid}
+.modal .box{background:#fff;border-radius:16px;padding:26px;width:min(440px,95vw);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal .box h3{font-size:18px;font-weight:800;margin-bottom:4px}
+.flbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin:14px 0 5px}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+.inp:focus{border-color:var(--primary)}
+.mfoot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.btn-ghost{background:var(--bg);color:var(--ink2);font-weight:600;font-size:13.5px;padding:11px 16px;border-radius:9px;border:none;cursor:pointer}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="panel">
+    <div class="ph">
+      <div><h3>Kontak</h3><div class="sub">Simpan nama, tag, &amp; catatan. Tag dipakai untuk broadcast per-segmen.</div></div>
+    </div>
+    <div class="tags-filter">
+      <a class="tagchip {% if not filter_tag %}on{% endif %}" href="/admin/wa/contacts">Semua</a>
+      {% for t in all_tags %}
+      <a class="tagchip {% if filter_tag == t %}on{% endif %}" href="/admin/wa/contacts?tag={{ t }}">{{ t }}</a>
+      {% endfor %}
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Nomor</th><th>Nama</th><th>Tag</th><th>Catatan</th><th>Nomor WA</th><th></th></tr></thead>
+        <tbody>
+          {% for c in contacts %}
+          <tr>
+            <td class="mono">+{{ c.phone }}</td>
+            <td>{% if c.name %}<b>{{ c.name }}</b>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% for t in c.tags %}<span class="tg">{{ t }}</span>{% endfor %}</td>
+            <td class="muted">{{ c.notes | truncate(length=50) }}</td>
+            <td class="muted">{{ c.session_label }}</td>
+            <td>
+              <button class="linkbtn edit"
+                data-sid="{{ c.session_id }}" data-jid="{{ c.jid }}" data-phone="{{ c.phone }}"
+                data-name="{{ c.name }}" data-tags="{{ c.tags_raw }}" data-notes="{{ c.notes }}">Edit</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if contacts | length == 0 %}<div class="empty">Belum ada kontak. Kontak muncul otomatis saat ada pesan masuk/keluar.</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mEdit"><div class="box">
+  <h3>Edit Kontak</h3>
+  <p class="flbl" id="cPhone" style="margin-top:4px;font-weight:500;color:var(--muted)"></p>
+  <form id="fEdit" method="post" action="/admin/wa/contacts/save">
+    <input type="hidden" name="_token" value="{{ csrf_token }}">
+    <input type="hidden" name="session_id" id="fSid">
+    <input type="hidden" name="jid" id="fJid">
+    <label class="flbl">Nama</label>
+    <input name="name" id="fName" class="inp" placeholder="mis. Budi Santoso" maxlength="80">
+    <label class="flbl">Tag (pisahkan koma)</label>
+    <input name="tags" id="fTags" class="inp" placeholder="mis. vip, langganan, jakarta">
+    <label class="flbl">Catatan</label>
+    <textarea name="notes" id="fNotes" class="inp" rows="3" placeholder="Catatan internal…"></textarea>
+    <div class="mfoot"><button type="button" class="btn-ghost" data-close>Batal</button><button type="submit" class="btn btn-pri">Simpan</button></div>
+  </form>
+</div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  function $(s){return document.querySelector(s);}
+  function closeM(){$('#mEdit').classList.remove('open');}
+  document.querySelectorAll('[data-close]').forEach(function(b){b.addEventListener('click',closeM);});
+  $('#mEdit').addEventListener('click',function(e){if(e.target===this)closeM();});
+  document.querySelectorAll('.edit').forEach(function(b){
+    b.addEventListener('click',function(){
+      $('#fSid').value=b.getAttribute('data-sid');
+      $('#fJid').value=b.getAttribute('data-jid');
+      $('#fName').value=b.getAttribute('data-name')||'';
+      $('#fTags').value=b.getAttribute('data-tags')||'';
+      $('#fNotes').value=b.getAttribute('data-notes')||'';
+      $('#cPhone').textContent='+'+b.getAttribute('data-phone');
+      $('#mEdit').classList.add('open');
+    });
+  });
+})();
+</script>
+{% endblock %}

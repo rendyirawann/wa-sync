@@ -110,8 +110,12 @@ textarea.inp{resize:vertical;font-family:inherit;line-height:1.5}
     <textarea name="body" id="body" class="inp" rows="5" placeholder="Halo {{ '{{nama}}' }}, ada {promo|penawaran} spesial untukmu!" required></textarea>
     <p class="hint">Variabel: <code>{{ '{{nama}}' }}</code> diisi dari kolom nama penerima. Spintax: <code>{halo|hai|hi}</code> dipilih acak per kontak (anti pesan kembar).</p>
 
-    <label class="flbl">Daftar penerima</label>
-    <textarea name="targets" class="inp" rows="6" placeholder="628123456789,Budi&#10;628987654321,Sari&#10;08111222333" required></textarea>
+    <label class="flbl">Segmen dari Kontak (opsional)</label>
+    <input name="segment_tag" class="inp" placeholder="mis. vip — ambil semua kontak bertag ini">
+    <p class="hint">Isi tag untuk kirim ke <b>semua kontak</b> dengan tag itu (dari menu <a href="/admin/wa/contacts">Kontak</a>). Bila diisi, daftar manual di bawah <b>diabaikan</b>.</p>
+
+    <label class="flbl">Daftar penerima (manual)</label>
+    <textarea name="targets" class="inp" rows="6" placeholder="628123456789,Budi&#10;628987654321,Sari&#10;08111222333"></textarea>
     <p class="hint">Satu nomor per baris, format <code>nomor,Nama</code> (Nama opsional). Nomor 0/8 otomatis jadi 62. Duplikat &amp; nomor tak valid dilewati. Maks 5.000/campaign.</p>
 
     <label class="flbl">Jadwalkan (opsional)</label>

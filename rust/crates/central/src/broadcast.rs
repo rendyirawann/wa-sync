@@ -102,6 +102,9 @@ pub struct CreateCampaign {
     body: String,
     #[serde(default)]
     targets: String,
+    /// Bila diisi: ambil penerima dari Kontak dengan tag ini (mengabaikan daftar manual).
+    #[serde(default)]
+    segment_tag: String,
     #[serde(default)]
     schedule_at: String,
     #[serde(rename = "_token", default)]
@@ -128,9 +131,30 @@ pub async fn create(user: CurrentUser, session: Session, State(state): State<App
         view::set_flash(&session, "error", "Isi pesan tidak boleh kosong.").await;
         return redir;
     }
-    let (parsed, dropped) = parse_targets(&f.targets, MAX_TARGETS);
+    // Sumber penerima: SEGMEN (tag kontak) bila diisi, else daftar manual.
+    let (parsed, dropped) = if !f.segment_tag.trim().is_empty() {
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT jid, COALESCE(name,'') FROM wa_contacts WHERE session_id=$1 AND tags ILIKE '%'||$2||'%'",
+        )
+        .bind(sid).bind(f.segment_tag.trim())
+        .fetch_all(&state.pool).await.unwrap_or_default();
+        let list: Vec<(String, Option<String>)> = rows
+            .iter()
+            .filter_map(|(jid, name)| {
+                let ph: String = jid.split('@').next().unwrap_or(jid).chars().filter(|c| c.is_ascii_digit()).collect();
+                if ph.len() >= 8 {
+                    Some((ph, if name.trim().is_empty() { None } else { Some(name.trim().to_string()) }))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        (list, 0usize)
+    } else {
+        parse_targets(&f.targets, MAX_TARGETS)
+    };
     if parsed.is_empty() {
-        view::set_flash(&session, "error", "Daftar penerima kosong atau tidak ada nomor valid.").await;
+        view::set_flash(&session, "error", "Daftar penerima kosong. Isi daftar manual atau pilih segmen tag yang ada kontaknya.").await;
         return redir;
     }
     let name = if f.name.trim().is_empty() { "Broadcast".to_string() } else { f.name.trim().to_string() };

@@ -173,6 +173,12 @@ const STMTS: &[&str] = &[
         PRIMARY KEY (session_id, jid))",
     // Persona AI khusus per-kontak (override system prompt sesi). Mis. "balas seperti pacar".
     "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS ai_persona text NOT NULL DEFAULT ''",
+    // Batch 2: CRM (tag & catatan kontak) + media pada pesan.
+    "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS tags text NOT NULL DEFAULT ''",
+    "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS notes text NOT NULL DEFAULT ''",
+    "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_url text",
+    "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_mime text",
+    "ALTER TABLE wa_messages ADD COLUMN IF NOT EXISTS media_name text",
 ];
 
 pub async fn run(pool: &PgPool) -> anyhow::Result<()> {

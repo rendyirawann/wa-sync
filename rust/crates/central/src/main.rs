@@ -7,6 +7,7 @@ mod ban;
 mod billing;
 mod broadcast;
 mod broadcast_engine;
+mod contacts;
 mod dash;
 mod datatables;
 mod inbox;
@@ -214,6 +215,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/messages/send", post(inbox::send))
         .route("/admin/wa/messages/resend", post(inbox::resend))
         .route("/admin/wa/messages/contact", post(inbox::set_contact))
+        // --- Kontak / CRM (Fase Batch 2) ---
+        .route("/admin/wa/contacts", get(contacts::index))
+        .route("/admin/wa/contacts/save", post(contacts::save))
         .route("/admin/wa/api-keys", get(wa::api_keys))
         .route("/admin/wa/webhooks", get(wa::webhooks))
         // --- Billing & Plan (Fase P5, Midtrans) ---

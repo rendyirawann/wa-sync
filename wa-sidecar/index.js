@@ -13,13 +13,50 @@ import * as Baileys from '@whiskeysockets/baileys';
 
 // --- Baileys 7 = ESM murni: ambil named export lewat namespace import ---
 const makeWASocket = Baileys.makeWASocket || Baileys.default;
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = Baileys;
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = Baileys;
 
 const PORT = Number(process.env.PORT || 8099);
 const RUST_URL = process.env.RUST_URL || 'http://127.0.0.1:8090';
 const SECRET = process.env.WA_SHARED_SECRET || '';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const authDir = (id) => path.join(HERE, 'auth', String(id).replace(/[^a-zA-Z0-9_-]/g, ''));
+// Media masuk disimpan ke storage yang di-serve Rust di /storage
+const MEDIA_DIR = path.join(HERE, '..', 'storage', 'app', 'public', 'wa-media');
+const safeId = (id) => String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+function extFromMime(mime) {
+  const map = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/3gpp': '3gp', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'application/pdf': 'pdf' };
+  if (!mime) return 'bin';
+  if (map[mime]) return map[mime];
+  return (mime.split('/')[1] || 'bin').split(';')[0];
+}
+// Kenali jenis konten pesan masuk (teks/media). Return null jika tak didukung.
+function extractContent(m) {
+  if (!m) return null;
+  if (m.conversation) return { type: 'text', caption: m.conversation, isMedia: false };
+  if (m.extendedTextMessage?.text) return { type: 'text', caption: m.extendedTextMessage.text, isMedia: false };
+  if (m.imageMessage) return { type: 'image', caption: m.imageMessage.caption || '', mime: m.imageMessage.mimetype || 'image/jpeg', isMedia: true };
+  if (m.videoMessage) return { type: 'video', caption: m.videoMessage.caption || '', mime: m.videoMessage.mimetype || 'video/mp4', isMedia: true };
+  if (m.documentMessage || m.documentWithCaptionMessage) {
+    const d = m.documentMessage || m.documentWithCaptionMessage?.message?.documentMessage || {};
+    return { type: 'document', caption: d.caption || '', mime: d.mimetype || 'application/octet-stream', name: d.fileName || 'dokumen', isMedia: true };
+  }
+  if (m.audioMessage) return { type: 'audio', caption: '', mime: m.audioMessage.mimetype || 'audio/ogg', isMedia: true };
+  if (m.stickerMessage) return { type: 'sticker', caption: '', mime: 'image/webp', isMedia: true };
+  if (m.locationMessage) return { type: 'text', caption: '📍 Lokasi: ' + m.locationMessage.degreesLatitude + ',' + m.locationMessage.degreesLongitude, isMedia: false };
+  if (m.contactMessage) return { type: 'text', caption: '👤 Kontak: ' + (m.contactMessage.displayName || ''), isMedia: false };
+  return null;
+}
+// Unduh & simpan media → kembalikan {url, mime, name} (url = path yang di-serve Rust).
+async function saveMedia(id, msg, info) {
+  const dir = path.join(MEDIA_DIR, safeId(id));
+  await fs.mkdir(dir, { recursive: true });
+  const buf = await downloadMediaMessage(msg, 'buffer', {}, { reuploadRequest: sessions.get(id)?.sock?.updateMediaMessage });
+  const ext = extFromMime(info.mime);
+  const base = safeId(msg.key?.id || ('m' + Date.now())) || ('m' + Date.now());
+  const fname = base + '.' + ext;
+  await fs.writeFile(path.join(dir, fname), buf);
+  return { url: '/storage/wa-media/' + safeId(id) + '/' + fname, mime: info.mime, name: info.name || fname };
+}
 
 if (!SECRET) console.warn('[wa-sidecar] WA_SHARED_SECRET kosong — endpoint tidak aman!');
 
@@ -215,12 +252,20 @@ async function onMsg(id, m) {
     if (!msg?.message || msg.key?.fromMe) continue;
     const raw = msg.key?.remoteJid || '';
     if (raw.endsWith('@g.us') || raw === 'status@broadcast') continue; // 1-to-1 saja
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
-    if (!text) continue;
+    const info = extractContent(msg.message);
+    if (!info) continue; // jenis tak didukung
     const jid = await resolvePn(sock, msg.key); // @lid → nomor asli
+    let media = null;
+    if (info.isMedia) {
+      media = await saveMedia(id, msg, info).catch((e) => { app.log.warn(`saveMedia ${id}: ${e.message}`); return null; });
+    }
     postEvent(id, 'message', {
       remote_jid: jid,
-      body: text,
+      body: info.caption || '',
+      msg_type: info.type,
+      media_url: media?.url || null,
+      media_mime: media?.mime || info.mime || null,
+      media_name: media?.name || info.name || null,
       wa_msg_id: msg.key?.id || null,
       ts: Number(msg.messageTimestamp) || 0,
     });
