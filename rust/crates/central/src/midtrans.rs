@@ -15,19 +15,31 @@ pub struct MidtransCfg {
 }
 
 impl MidtransCfg {
+    /// Baca konfig: Settings DB dulu, jatuh ke variabel .env bila kosong.
     pub fn from_settings(s: &HashMap<String, String>) -> Self {
         let g = |k: &str| s.get(k).cloned().unwrap_or_default();
-        Self {
-            enabled: g("midtrans_enabled") == "1",
-            is_production: g("midtrans_is_production") == "1",
-            server_key: g("midtrans_server_key"),
-            client_key: g("midtrans_client_key"),
-        }
+        // DB setting → fallback env
+        let pick = |dbk: &str, envk: &str| {
+            let v = g(dbk);
+            if v.trim().is_empty() { std::env::var(envk).unwrap_or_default() } else { v }
+        };
+        let server_key = pick("midtrans_server_key", "MIDTRANS_SERVER_KEY");
+        let client_key = pick("midtrans_client_key", "MIDTRANS_CLIENT_KEY");
+        // production: setting DB non-kosong menang; else env (true/1)
+        let db_prod = g("midtrans_is_production");
+        let is_production = if !db_prod.trim().is_empty() {
+            db_prod == "1"
+        } else {
+            matches!(std::env::var("MIDTRANS_IS_PRODUCTION").unwrap_or_default().trim(), "true" | "1")
+        };
+        // aktif bila toggle DB "1" ATAU server key tersedia (dari .env)
+        let enabled = g("midtrans_enabled") == "1" || !server_key.trim().is_empty();
+        Self { enabled, is_production, server_key, client_key }
     }
 
     /// Siap dipakai bila diaktifkan + server key terisi.
     pub fn is_configured(&self) -> bool {
-        self.enabled && !self.server_key.is_empty()
+        self.enabled && !self.server_key.trim().is_empty()
     }
 
     /// Base URL Snap (transaksi) sesuai mode.
@@ -59,10 +71,16 @@ pub async fn create_snap_transaction(
         "callbacks": { "finish": finish_url }
     });
     let url = format!("{}/snap/v1/transactions", cfg.snap_base());
-    let resp = reqwest::Client::new()
+    let mut req = reqwest::Client::new()
         .post(&url)
         .basic_auth(&cfg.server_key, Some(""))
-        .header("Accept", "application/json")
+        .header("Accept", "application/json");
+    // Override URL notifikasi per-transaksi bila MIDTRANS_NOTIFY_URL diisi (else pakai dashboard).
+    let notify = std::env::var("MIDTRANS_NOTIFY_URL").unwrap_or_default();
+    if !notify.trim().is_empty() {
+        req = req.header("X-Override-Notification", notify.trim());
+    }
+    let resp = req
         .json(&body)
         .timeout(std::time::Duration::from_secs(15))
         .send()

@@ -27,6 +27,7 @@ mod seed;
 mod sessionstore;
 mod settings;
 mod social;
+mod subscribers;
 mod users;
 mod view;
 mod wa;
@@ -116,6 +117,9 @@ async fn main() -> anyhow::Result<()> {
     menu::seed(&state.pool).await;
     menu::ensure(&state.pool).await;
 
+    // Akun subscriber Enterprise (role User, 1 tahun) + data contoh — butuh plans/wa_* dari wamigrate.
+    seed::enterprise_subscriber(&state.pool).await;
+
     // Penjadwal Broadcast (Fase C): lanjutkan campaign 'running' yang tertunda saat boot,
     // lalu tiap 30 detik jalankan campaign terjadwal yang sudah waktunya.
     {
@@ -194,8 +198,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/sessions/{id}/simulate", post(wasessions::simulate))
         .route("/admin/wa/sessions/{id}/logout", post(wasessions::logout))
         .route("/admin/wa/sessions/{id}", axum::routing::delete(wasessions::destroy))
-        // --- WA Service (placeholder Fase B) ---
-        .route("/admin/wa/subscribers", get(wa::subscribers))
+        // --- Subscriber management (Superadmin) ---
+        .route("/admin/wa/subscribers", get(subscribers::index))
+        .route("/admin/wa/subscribers/{id}/plan", post(subscribers::set_plan))
         // --- Broadcast / Campaign (Fase C, nyata) ---
         .route("/admin/wa/broadcast", get(broadcast::index).post(broadcast::create))
         .route("/admin/wa/broadcast/{id}", get(broadcast::show))

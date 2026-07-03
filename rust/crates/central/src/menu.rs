@@ -93,6 +93,9 @@ pub async fn ensure(pool: &PgPool) {
         .bind(section).bind(label).bind(icon).bind(url).bind(active_key).bind(permission).bind(sort)
         .execute(pool).await;
     }
+    // Gate menu khusus Superadmin/admin (butuh view_resources). Subscriber mgmt = alat admin.
+    let _ = sqlx::query("UPDATE menus SET permission='view_resources' WHERE url='/admin/wa/subscribers' AND (permission IS NULL OR permission='')")
+        .execute(pool).await;
 }
 
 /// Muat menu aktif, filter per-izin user, kelompokkan per-section (urut sort_order).

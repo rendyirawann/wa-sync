@@ -44,6 +44,7 @@ Homestead.yaml
 *.log
 *.tmp
 /tmp/
+/backups/
 
 # ===== OS / Editor =====
 .DS_Store

@@ -1,6 +1,4 @@
-//! Halaman modul WA Service (placeholder Fase B).
-//! Semua memakai shell custom `layout/wa.html` lewat template `wa/placeholder.html`.
-//! Backend nyata (Baileys gateway, multi-tenant) menyusul di Fase B.
+//! Halaman modul WA Service: API Keys & Webhooks (shell custom `layout/wa.html`).
 
 use axum::{extract::State, response::Html};
 use serde_json::json;
@@ -8,37 +6,6 @@ use sqlx::types::Uuid;
 use tower_sessions::Session;
 
 use crate::{rbac::CurrentUser, view, AppState};
-
-/// Render satu halaman placeholder bergaya shell WA.
-async fn page(
-    state: &AppState,
-    session: &Session,
-    user: &CurrentUser,
-    active: &str,
-    title: &str,
-    crumb: &str,
-    icon: &str,
-    desc: &str,
-    features: &[&str],
-) -> Html<String> {
-    let mut ctx = view::base_context(state, session, user, active).await;
-    ctx.insert("title", title);
-    ctx.insert("crumb", crumb);
-    ctx.insert("ph_icon", icon);
-    ctx.insert("ph_desc", desc);
-    ctx.insert("ph_features", &features);
-    match state.tera.render("wa/placeholder.html", &ctx) {
-        Ok(html) => Html(html),
-        Err(e) => Html(format!("<pre>Template error: {e:#}</pre>")),
-    }
-}
-
-pub async fn subscribers(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
-    page(&state, &session, &user, "subscribers", "Subscriber", "WhatsApp <span>•</span> <b>Subscriber</b>",
-        "i-users",
-        "Data pelanggan yang berlangganan layanan WhatsApp Anda — paket aktif, kuota pemakaian, dan nomor yang ditautkan ke tiap subscriber.",
-        &["Multi-tenant: 1 subscriber = banyak sesi", "Paket & kuota pesan per subscriber", "Riwayat langganan & status pembayaran", "Isolasi data antar tenant"]).await
-}
 
 pub async fn api_keys(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
     // app_key = per akun (sama untuk semua nomor user); auth_key = per nomor.
