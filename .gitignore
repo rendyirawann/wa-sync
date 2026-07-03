@@ -6,8 +6,8 @@
 *.env
 !**/.env.example
 # Kredensial sesi WhatsApp (Baileys) — setara login WA, sangat sensitif
-wa-sidecar/auth/
-**/auth/
+# (spesifik ke folder sidecar; JANGAN pakai **/auth/ karena ikut mengabaikan templates/auth/)
+/wa-sidecar/auth/
 # Kunci / sertifikat
 *.pem
 *.key
