@@ -88,6 +88,7 @@ pub async fn ensure(pool: &PgPool) {
         ("Menu", "Kontak", "users", "/admin/wa/contacts", "contacts", None, 55),
         ("Menu", "Auto-reply", "bolt", "/admin/wa/autoreply", "autoreply", None, 56),
         ("Menu", "Knowledge AI", "chat", "/admin/wa/knowledge", "knowledge", None, 57),
+        ("Developer", "API Docs", "list", "/admin/wa/api-docs", "api-docs", None, 65),
     ];
     for &(section, label, icon, url, active_key, permission, sort) in extras {
         let _ = sqlx::query(

@@ -233,6 +233,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/knowledge/create", post(knowledge::create))
         .route("/admin/wa/knowledge/{id}", axum::routing::delete(knowledge::destroy))
         .route("/admin/wa/api-keys", get(wa::api_keys))
+        .route("/admin/wa/api-docs", get(wa::api_docs))
         .route("/admin/wa/webhooks", get(wa::webhooks))
         // --- Billing & Plan (Fase P5, Midtrans) ---
         .route("/admin/wa/billing", get(billing::index))
@@ -283,6 +284,9 @@ async fn main() -> anyhow::Result<()> {
         // Public API (di luar require_auth; autentik via app_key + auth_key)
         .route("/api/create-message", post(publicapi::create_message))
         .route("/api/create-message-media", post(publicapi::create_message_media))
+        .route("/api/send-location", post(publicapi::send_location))
+        .route("/api/messages", get(publicapi::get_messages))
+        .route("/api/contacts", get(publicapi::get_contacts))
         .route("/api/status", get(publicapi::status))
         // Notifikasi pembayaran Midtrans (publik; dijaga signature SHA512, bukan loopback)
         .route("/api/billing/midtrans/notification", post(billing::midtrans_notification))

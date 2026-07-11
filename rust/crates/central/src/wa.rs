@@ -33,6 +33,19 @@ pub async fn api_keys(user: CurrentUser, session: Session, State(state): State<A
     }
 }
 
+pub async fn api_docs(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
+    let app_key: String = sqlx::query_scalar("SELECT app_key::text FROM users WHERE id=$1")
+        .bind(user.id).fetch_one(&state.pool).await.unwrap_or_default();
+    let base = std::env::var("APP_URL").unwrap_or_else(|_| "http://127.0.0.1:8090".into());
+    let mut ctx = view::base_context(&state, &session, &user, "api-docs").await;
+    ctx.insert("app_key", &app_key);
+    ctx.insert("api_base", &base);
+    match state.tera.render("wa/api_docs.html", &ctx) {
+        Ok(html) => Html(html),
+        Err(e) => Html(format!("<pre>Template error: {e:#}</pre>")),
+    }
+}
+
 pub async fn webhooks(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
     let rows: Vec<(Uuid, String, Option<String>, Option<String>, bool, Option<String>)> = if user.is_superadmin() {
         sqlx::query_as("SELECT id, label, phone, webhook_url, webhook_enabled, webhook_secret FROM wa_sessions ORDER BY created_at DESC")

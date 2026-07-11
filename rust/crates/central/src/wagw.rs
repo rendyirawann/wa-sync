@@ -55,6 +55,14 @@ impl Gateway {
             .send().await?.error_for_status()?.json().await?)
     }
 
+    /// Kirim lokasi → masuk antrian throttle.
+    pub async fn send_location(&self, session_id: &str, to: &str, lat: f64, lng: f64, name: &str) -> anyhow::Result<Value> {
+        Ok(self
+            .req(reqwest::Method::POST, &format!("/sessions/{session_id}/send-location"))
+            .json(&json!({ "to": to, "lat": lat, "lng": lng, "name": name }))
+            .send().await?.error_for_status()?.json().await?)
+    }
+
     /// Ubah level anti-ban sesi secara live (tanpa reconnect).
     pub async fn set_level(&self, session_id: &str, level: &str) -> anyhow::Result<()> {
         self.req(reqwest::Method::POST, &format!("/sessions/{session_id}/level"))

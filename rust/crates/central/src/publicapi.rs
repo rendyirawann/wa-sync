@@ -12,8 +12,44 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::types::Uuid;
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::{quota, AppState};
+
+/// Rate-limit per appkey: 60 permintaan / menit (in-memory sliding window).
+static API_RL: LazyLock<Mutex<HashMap<String, (Instant, u32)>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+fn rate_ok(key: &str) -> bool {
+    const LIMIT: u32 = 60;
+    let mut m = API_RL.lock().unwrap();
+    let now = Instant::now();
+    let e = m.entry(key.to_string()).or_insert((now, 0));
+    if now.duration_since(e.0) > Duration::from_secs(60) {
+        *e = (now, 0);
+    }
+    e.1 += 1;
+    e.1 <= LIMIT
+}
+
+/// Resolusi appkey+authkey → (session_id, user_id) + rate-limit. Err(Response) bila gagal.
+async fn auth_session(state: &AppState, appkey: &str, authkey: &str) -> Result<(Uuid, Uuid), Response> {
+    let Ok(app) = Uuid::parse_str(appkey.trim()) else {
+        return Err(err("invalid_key", "appkey/authkey tidak valid", StatusCode::UNAUTHORIZED));
+    };
+    if !rate_ok(appkey.trim()) {
+        return Err(err("rate_limited", "terlalu banyak permintaan (maks 60/menit)", StatusCode::TOO_MANY_REQUESTS));
+    }
+    let row: Option<(Uuid, Uuid)> = sqlx::query_as(
+        "SELECT s.id, s.user_id FROM wa_sessions s JOIN users u ON u.id=s.user_id WHERE s.auth_key=$1 AND u.app_key=$2",
+    )
+    .bind(authkey.trim())
+    .bind(app)
+    .fetch_optional(&state.pool)
+    .await
+    .ok()
+    .flatten();
+    row.ok_or_else(|| err("invalid_key", "appkey/authkey tidak valid", StatusCode::UNAUTHORIZED))
+}
 
 #[derive(Deserialize, Default)]
 pub struct ApiMsg {
@@ -25,6 +61,10 @@ pub struct ApiMsg {
     #[serde(default)] pub media: String,
     /// Jenis media: image | video | document. Kosong = ditebak dari ekstensi URL.
     #[serde(default, rename = "type")] pub media_type: String,
+    /// Lokasi (endpoint send-location).
+    #[serde(default)] pub lat: String,
+    #[serde(default)] pub lng: String,
+    #[serde(default)] pub name: String,
     #[serde(default)] pub sandbox: Option<String>,
 }
 
@@ -50,6 +90,9 @@ impl<S: Send + Sync> FromRequest<S> for ApiMsg {
                 message: m.remove("message").unwrap_or_default(),
                 media: m.remove("media").or_else(|| m.remove("media_url")).unwrap_or_default(),
                 media_type: m.remove("type").unwrap_or_default(),
+                lat: m.remove("lat").unwrap_or_default(),
+                lng: m.remove("lng").unwrap_or_default(),
+                name: m.remove("name").unwrap_or_default(),
                 sandbox: m.remove("sandbox"),
             })
         } else {
@@ -75,6 +118,9 @@ pub async fn create_message(State(state): State<AppState>, msg: ApiMsg) -> Respo
     let Ok(appkey) = Uuid::parse_str(msg.appkey.trim()) else {
         return err("invalid_key", "appkey/authkey tidak valid", StatusCode::UNAUTHORIZED);
     };
+    if !rate_ok(msg.appkey.trim()) {
+        return err("rate_limited", "terlalu banyak permintaan (maks 60/menit)", StatusCode::TOO_MANY_REQUESTS);
+    }
     let row: Option<(Uuid, String, Uuid)> = sqlx::query_as(
         "SELECT s.id, s.status, s.user_id FROM wa_sessions s JOIN users u ON u.id = s.user_id \
          WHERE s.auth_key = $1 AND u.app_key = $2",
@@ -123,6 +169,9 @@ pub async fn create_message_media(State(state): State<AppState>, msg: ApiMsg) ->
     let Ok(appkey) = Uuid::parse_str(msg.appkey.trim()) else {
         return err("invalid_key", "appkey/authkey tidak valid", StatusCode::UNAUTHORIZED);
     };
+    if !rate_ok(msg.appkey.trim()) {
+        return err("rate_limited", "terlalu banyak permintaan (maks 60/menit)", StatusCode::TOO_MANY_REQUESTS);
+    }
     let row: Option<(Uuid, String, Uuid)> = sqlx::query_as(
         "SELECT s.id, s.status, s.user_id FROM wa_sessions s JOIN users u ON u.id = s.user_id \
          WHERE s.auth_key = $1 AND u.app_key = $2",
@@ -191,4 +240,67 @@ pub async fn status(State(state): State<AppState>, Query(q): Query<HashMap<Strin
         "phone": phone,
         "quota": { "used_today": used, "max_per_day": max_msg }
     })).into_response()
+}
+
+/// GET /api/messages?appkey=&authkey=&jid=&limit= — riwayat pesan (opsional per-kontak).
+pub async fn get_messages(State(state): State<AppState>, Query(q): Query<HashMap<String, String>>) -> Response {
+    let (sid, _uid) = match auth_session(&state, q.get("appkey").map(String::as_str).unwrap_or(""), q.get("authkey").map(String::as_str).unwrap_or("")).await {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let jid = q.get("jid").cloned().unwrap_or_default();
+    let limit: i64 = q.get("limit").and_then(|s| s.parse().ok()).unwrap_or(50).clamp(1, 200);
+    type Row = (String, String, Option<String>, String, Option<String>, String, chrono::NaiveDateTime);
+    let rows: Vec<Row> = if jid.trim().is_empty() {
+        sqlx::query_as("SELECT direction, remote_jid, body, COALESCE(msg_type,'text'), media_url, status, created_at::timestamp FROM wa_messages WHERE session_id=$1 ORDER BY created_at DESC LIMIT $2")
+            .bind(sid).bind(limit).fetch_all(&state.pool).await.unwrap_or_default()
+    } else {
+        sqlx::query_as("SELECT direction, remote_jid, body, COALESCE(msg_type,'text'), media_url, status, created_at::timestamp FROM wa_messages WHERE session_id=$1 AND remote_jid=$2 ORDER BY created_at DESC LIMIT $3")
+            .bind(sid).bind(jid.trim()).bind(limit).fetch_all(&state.pool).await.unwrap_or_default()
+    };
+    let data: Vec<_> = rows.iter().map(|r| json!({
+        "direction": r.0, "from": r.1, "body": r.2.clone().unwrap_or_default(),
+        "type": r.3, "media": r.4.clone().unwrap_or_default(), "status": r.5, "at": r.6.to_string()
+    })).collect();
+    Json(json!({ "status": true, "data": data })).into_response()
+}
+
+/// GET /api/contacts?appkey=&authkey= — daftar kontak (nama + tag).
+pub async fn get_contacts(State(state): State<AppState>, Query(q): Query<HashMap<String, String>>) -> Response {
+    let (sid, _uid) = match auth_session(&state, q.get("appkey").map(String::as_str).unwrap_or(""), q.get("authkey").map(String::as_str).unwrap_or("")).await {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let rows: Vec<(String, String, String)> = sqlx::query_as("SELECT jid, COALESCE(name,''), COALESCE(tags,'') FROM wa_contacts WHERE session_id=$1 ORDER BY name")
+        .bind(sid).fetch_all(&state.pool).await.unwrap_or_default();
+    let data: Vec<_> = rows.iter().map(|r| {
+        let tags: Vec<&str> = r.2.split(',').map(|t| t.trim()).filter(|t| !t.is_empty()).collect();
+        json!({ "phone": r.0.split('@').next().unwrap_or(&r.0), "jid": r.0, "name": r.1, "tags": tags })
+    }).collect();
+    Json(json!({ "status": true, "data": data })).into_response()
+}
+
+/// POST /api/send-location — kirim lokasi (appkey/authkey/to/lat/lng/name).
+pub async fn send_location(State(state): State<AppState>, msg: ApiMsg) -> Response {
+    let (sid, uid) = match auth_session(&state, &msg.appkey, &msg.authkey).await {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let to = msg.to.trim();
+    let lat: f64 = msg.lat.trim().parse().unwrap_or(f64::NAN);
+    let lng: f64 = msg.lng.trim().parse().unwrap_or(f64::NAN);
+    if to.is_empty() || lat.is_nan() || lng.is_nan() {
+        return err("validation", "'to', 'lat', 'lng' wajib diisi (angka)", StatusCode::UNPROCESSABLE_ENTITY);
+    }
+    let (_, max_msg, _, _) = quota::plan_limits(&state.pool, uid).await;
+    if max_msg > 0 && quota::sent_today(&state.pool, uid).await >= max_msg {
+        return err("quota_exceeded", "Kuota pesan harian habis.", StatusCode::FORBIDDEN);
+    }
+    if msg.sandbox.as_deref() == Some("true") {
+        return (StatusCode::OK, Json(json!({"status":true,"message_status":"Success","message":"sandbox","id":sid.to_string()}))).into_response();
+    }
+    match state.wa.send_location(&sid.to_string(), to, lat, lng, msg.name.trim()).await {
+        Ok(_) => (StatusCode::OK, Json(json!({"status":true,"message_status":"Success","message":"queued","id":sid.to_string(),"data":{"to":to}}))).into_response(),
+        Err(e) => err("gateway_error", &format!("gagal kirim ke gateway: {e}"), StatusCode::BAD_GATEWAY),
+    }
 }

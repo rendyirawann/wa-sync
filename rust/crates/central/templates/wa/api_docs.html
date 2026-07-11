@@ -1,0 +1,93 @@
+{% extends "layout/wa.html" %}
+{% block title %}API Docs{% endblock %}
+{% block page_title %}Dokumentasi API{% endblock %}
+{% block page_crumb %}Developer <span>•</span> <b>API Docs</b>{% endblock %}
+
+{% block style %}
+.doc{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:24px 26px;max-width:860px}
+.doc h2{font-size:16px;font-weight:800;margin:22px 0 6px}.doc h2:first-child{margin-top:0}
+.doc p{font-size:13.5px;color:var(--ink2);line-height:1.6;margin-bottom:10px}
+.ep{border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.ep .h{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--line)}
+.m{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;color:#fff}
+.m.get{background:#2563eb}.m.post{background:#15a85b}
+.ep code.path{font-family:monospace;font-size:13px;font-weight:700}
+.ep .b{padding:14px 16px}
+.ep .b p{font-size:13px;margin-bottom:8px}
+.params{width:100%;border-collapse:collapse;margin:6px 0 10px}
+.params td{padding:5px 8px;font-size:12.5px;border-bottom:1px solid var(--line)}
+.params td:first-child{font-family:monospace;font-weight:700;white-space:nowrap;width:130px}
+pre{background:#0f172a;color:#e2e8f0;border-radius:9px;padding:12px 14px;font-size:12px;overflow-x:auto;line-height:1.5}
+.tok{background:var(--primary-soft);color:var(--primary);padding:1px 6px;border-radius:5px;font-family:monospace;font-size:12px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap"><div class="doc">
+  <h2>Autentikasi</h2>
+  <p>Semua endpoint butuh <span class="tok">appkey</span> (per akun) &amp; <span class="tok">authkey</span> (per nomor). appkey Anda: <span class="tok">{{ app_key }}</span>. authkey tiap nomor ada di menu <a href="/admin/wa/api-keys">API Keys</a>. Base URL: <span class="tok">{{ api_base }}</span>. Rate limit: <b>60 permintaan/menit</b> per appkey.</p>
+
+  <div class="ep">
+    <div class="h"><span class="m post">POST</span><code class="path">/api/create-message</code></div>
+    <div class="b">
+      <p>Kirim pesan teks (masuk antrian throttle anti-ban).</p>
+      <table class="params">
+        <tr><td>appkey</td><td>appkey akun</td></tr>
+        <tr><td>authkey</td><td>authkey nomor pengirim</td></tr>
+        <tr><td>to</td><td>nomor tujuan (62…)</td></tr>
+        <tr><td>message</td><td>isi pesan</td></tr>
+        <tr><td>sandbox</td><td>opsional, "true" = uji tanpa kirim</td></tr>
+      </table>
+<pre>curl -X POST {{ api_base }}/api/create-message \
+  -d "appkey={{ app_key }}" -d "authkey=AUTHKEY" \
+  -d "to=628123456789" -d "message=Halo dari API"</pre>
+    </div>
+  </div>
+
+  <div class="ep">
+    <div class="h"><span class="m post">POST</span><code class="path">/api/create-message-media</code></div>
+    <div class="b">
+      <p>Kirim media via URL. Param tambahan: <b>media</b> (URL), <b>type</b> (image/video/document), <b>message</b> (caption).</p>
+<pre>curl -X POST {{ api_base }}/api/create-message-media \
+  -d "appkey={{ app_key }}" -d "authkey=AUTHKEY" -d "to=628123456789" \
+  -d "media=https://contoh.com/gambar.jpg" -d "type=image" -d "message=Caption"</pre>
+    </div>
+  </div>
+
+  <div class="ep">
+    <div class="h"><span class="m post">POST</span><code class="path">/api/send-location</code></div>
+    <div class="b">
+      <p>Kirim lokasi. Param: <b>to, lat, lng, name</b>.</p>
+<pre>curl -X POST {{ api_base }}/api/send-location \
+  -d "appkey={{ app_key }}" -d "authkey=AUTHKEY" -d "to=628123456789" \
+  -d "lat=-6.2088" -d "lng=106.8456" -d "name=Kantor Jakarta"</pre>
+    </div>
+  </div>
+
+  <div class="ep">
+    <div class="h"><span class="m get">GET</span><code class="path">/api/messages</code></div>
+    <div class="b">
+      <p>Ambil riwayat pesan. Query: <b>appkey, authkey, jid</b> (opsional), <b>limit</b> (default 50, maks 200).</p>
+<pre>curl "{{ api_base }}/api/messages?appkey={{ app_key }}&authkey=AUTHKEY&limit=20"</pre>
+    </div>
+  </div>
+
+  <div class="ep">
+    <div class="h"><span class="m get">GET</span><code class="path">/api/contacts</code></div>
+    <div class="b">
+      <p>Daftar kontak (nama + tag). Query: <b>appkey, authkey</b>.</p>
+<pre>curl "{{ api_base }}/api/contacts?appkey={{ app_key }}&authkey=AUTHKEY"</pre>
+    </div>
+  </div>
+
+  <div class="ep">
+    <div class="h"><span class="m get">GET</span><code class="path">/api/status</code></div>
+    <div class="b">
+      <p>Status nomor + sisa kuota harian. Query: <b>appkey, authkey</b>.</p>
+<pre>curl "{{ api_base }}/api/status?appkey={{ app_key }}&authkey=AUTHKEY"</pre>
+    </div>
+  </div>
+
+  <h2>Format respons</h2>
+  <p>Sukses: <span class="tok">{"status":true, ...}</span>. Gagal: <span class="tok">{"status":false,"code":"...","message":"..."}</span> dengan HTTP status sesuai (401 kunci salah, 403 kuota habis, 429 rate limit).</p>
+</div></div>
+{% endblock %}

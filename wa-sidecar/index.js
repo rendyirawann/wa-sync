@@ -273,17 +273,20 @@ async function onMsg(id, m) {
 }
 
 // --- Outbound queue ber-throttle (anti-ban): jeda acak + simulasi mengetik + cap jam/hari ---
-function enqueue(id, to, text, media) {
+function enqueue(id, to, text, media, location) {
   const s = sessions.get(id);
   if (!s) return { ok: false, error: 'unknown_session' };
   s.q = s.q || [];
-  s.q.push({ to, text, media: media || null });
+  s.q.push({ to, text, media: media || null, location: location || null });
   if (!s.pumping) pump(id).catch((e) => app.log.error(`pump ${id}: ${e.message}`));
   return { ok: true, position: s.q.length };
 }
 
-// Bangun konten pesan Baileys dari item antrian (teks atau media via URL).
+// Bangun konten pesan Baileys dari item antrian (teks / media via URL / lokasi).
 function buildContent(msg) {
+  if (msg.location) {
+    return { location: { degreesLatitude: Number(msg.location.lat), degreesLongitude: Number(msg.location.lng), name: msg.location.name || '' } };
+  }
   const m = msg.media;
   if (!m || !m.url) return { text: String(msg.text ?? '') };
   const caption = String(msg.text || m.caption || '');
@@ -406,6 +409,17 @@ app.post('/sessions/:id/send-media', async (req, reply) => {
   if (!media_url) return reply.code(400).send({ error: 'media_url required' });
   const media = { url: String(media_url), type: ['image', 'video', 'document'].includes(type) ? type : 'document' };
   const r = enqueue(req.params.id, to, String(caption ?? ''), media);
+  return reply.code(202).send({ queued: true, position: r.position, ...capStats(s) });
+});
+
+// Kirim LOKASI → masuk antrian throttle.
+app.post('/sessions/:id/send-location', async (req, reply) => {
+  const s = sessions.get(req.params.id);
+  if (!s) return reply.code(404).send({ error: 'unknown_session' });
+  const { to, lat, lng, name } = req.body || {};
+  if (!String(to || '').replace(/\D/g, '')) return reply.code(400).send({ error: 'bad_to' });
+  if (lat === undefined || lng === undefined) return reply.code(400).send({ error: 'lat/lng required' });
+  const r = enqueue(req.params.id, to, '', null, { lat, lng, name: name || '' });
   return reply.code(202).send({ queued: true, position: r.position, ...capStats(s) });
 });
 
