@@ -200,6 +200,18 @@ const STMTS: &[&str] = &[
         enabled boolean NOT NULL DEFAULT true, \
         created_at timestamptz NOT NULL DEFAULT now())",
     "CREATE INDEX IF NOT EXISTS idx_wa_knowledge_session ON wa_knowledge (session_id)",
+    // Batch 5: billing lanjutan (reminder expiry + kupon + invoice).
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_reminded_for timestamptz",
+    "CREATE TABLE IF NOT EXISTS wa_coupons (\
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(), \
+        code text NOT NULL UNIQUE, \
+        percent int NOT NULL DEFAULT 0 CHECK (percent BETWEEN 0 AND 100), \
+        active boolean NOT NULL DEFAULT true, \
+        expires_at timestamptz, \
+        max_uses int NOT NULL DEFAULT 0, \
+        used_count int NOT NULL DEFAULT 0, \
+        created_at timestamptz NOT NULL DEFAULT now())",
+    "ALTER TABLE wa_invoices ADD COLUMN IF NOT EXISTS coupon_code text",
 ];
 
 pub async fn run(pool: &PgPool) -> anyhow::Result<()> {

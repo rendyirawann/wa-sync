@@ -37,6 +37,84 @@ pub async fn downgrade_expired(pool: &sqlx::PgPool) {
     }
 }
 
+/// Job berkala: kirim email pengingat H-3 sebelum paket kadaluarsa (sekali per masa berlaku).
+pub async fn send_expiry_reminders(pool: &sqlx::PgPool) {
+    if !crate::mailer::configured() {
+        return;
+    }
+    type Row = (Uuid, String, String, NaiveDateTime, i32);
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT id, name, email, plan_expires_at::timestamp, \
+                GREATEST(1, CEIL(EXTRACT(EPOCH FROM (plan_expires_at - now()))/86400.0))::int \
+         FROM users \
+         WHERE plan_expires_at IS NOT NULL AND plan_expires_at > now() \
+           AND plan_expires_at <= now() + interval '3 days' \
+           AND (plan_reminded_for IS NULL OR plan_reminded_for <> plan_expires_at) \
+           AND email <> ''",
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default();
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://127.0.0.1:8090".into());
+    for (id, name, email, expires, days) in rows {
+        let html = format!(
+            "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto\">\
+               <h2 style=\"color:#15a85b\">Paket akan berakhir</h2>\
+               <p>Halo {name}, paket langganan WA Service Anda akan <b>berakhir dalam {days} hari</b> (pada {}).</p>\
+               <p style=\"margin:24px 0\"><a href=\"{app_url}/admin/wa/billing\" \
+                 style=\"background:#15a85b;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold\">Perpanjang Sekarang</a></p>\
+               <p style=\"color:#999;font-size:12px\">Perpanjang sebelum masa berlaku habis agar layanan tetap aktif.</p>\
+             </div>",
+            expires.format("%d %b %Y")
+        );
+        if crate::mailer::send_html(&email, "Paket langganan akan berakhir — WA Service", html).await {
+            let _ = sqlx::query("UPDATE users SET plan_reminded_for = plan_expires_at WHERE id=$1").bind(id).execute(pool).await;
+        }
+    }
+}
+
+/// Halaman invoice (bisa di-print) untuk satu order.
+pub async fn invoice(user: CurrentUser, session: Session, State(state): State<AppState>, axum::extract::Path(order_id): axum::extract::Path<String>) -> Response {
+    type Inv = (String, String, i64, String, Option<NaiveDateTime>, Option<NaiveDateTime>, String, Uuid, Option<String>);
+    let inv: Option<Inv> = sqlx::query_as(
+        "SELECT order_id, plan_name, amount_idr, status, created_at::timestamp, paid_at::timestamp, \
+                COALESCE(midtrans_payment_type,''), user_id, coupon_code \
+         FROM wa_invoices WHERE order_id=$1",
+    )
+    .bind(&order_id)
+    .fetch_optional(&state.pool)
+    .await
+    .ok()
+    .flatten();
+    let Some(i) = inv else { return (StatusCode::NOT_FOUND, "Invoice tidak ditemukan").into_response() };
+    if !user.is_superadmin() && i.7 != user.id {
+        return (StatusCode::FORBIDDEN, "forbidden").into_response();
+    }
+    let (cust_name, cust_email): (String, String) = sqlx::query_as("SELECT name, email FROM users WHERE id=$1")
+        .bind(i.7).fetch_one(&state.pool).await.unwrap_or_else(|_| ("-".into(), "-".into()));
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://127.0.0.1:8090".into());
+    let mut ctx = view::base_context(&state, &session, &user, "billing").await;
+    ctx.insert("order_id", &i.0);
+    ctx.insert("plan_name", &i.1);
+    ctx.insert("amount_fmt", &rupiah(i.2));
+    ctx.insert("status", &i.3);
+    ctx.insert("created", &i.4.map(fmt_dt).unwrap_or_default());
+    ctx.insert("paid", &i.5.map(fmt_dt).unwrap_or_default());
+    ctx.insert("pay_type", &i.6);
+    ctx.insert("coupon", &i.8.clone().unwrap_or_default());
+    ctx.insert("cust_name", &cust_name);
+    ctx.insert("cust_email", &cust_email);
+    ctx.insert("site_url", &app_url);
+    match state.tera.render("wa/invoice.html", &ctx) {
+        Ok(h) => Html(h).into_response(),
+        Err(e) => Html(format!("<pre>Template error: {e:#}</pre>")).into_response(),
+    }
+}
+
+fn fmt_dt(d: NaiveDateTime) -> String {
+    d.format("%d %b %Y, %H:%M").to_string()
+}
+
 /// Format ribuan ala Indonesia: 99000 -> "99.000".
 fn rupiah(n: i64) -> String {
     let s = n.abs().to_string();
@@ -146,6 +224,8 @@ pub async fn index(user: CurrentUser, session: Session, State(state): State<AppS
 pub struct CheckoutForm {
     #[serde(default)]
     plan_id: String,
+    #[serde(default)]
+    coupon: String,
     #[serde(rename = "_token", default)]
     token: String,
 }
@@ -177,13 +257,36 @@ pub async fn checkout(user: CurrentUser, session: Session, State(state): State<A
         return back;
     }
 
+    // Kupon (opsional): validasi & terapkan diskon persen.
+    let mut price = price;
+    let mut coupon_code: Option<String> = None;
+    if !f.coupon.trim().is_empty() {
+        let cc = f.coupon.trim().to_uppercase();
+        let row: Option<(i32,)> = sqlx::query_as(
+            "SELECT percent FROM wa_coupons WHERE upper(code)=$1 AND active \
+             AND (expires_at IS NULL OR expires_at > now()) AND (max_uses=0 OR used_count < max_uses)",
+        )
+        .bind(&cc).fetch_optional(&state.pool).await.ok().flatten();
+        match row {
+            Some((percent,)) => {
+                price -= price * percent as i64 / 100;
+                if price < 1 { price = 1; }
+                coupon_code = Some(cc);
+            }
+            None => {
+                view::set_flash(&session, "error", "Kode kupon tidak valid / kadaluarsa.").await;
+                return back;
+            }
+        }
+    }
+
     let order_id = format!("WA-{}", Uuid::new_v4().simple());
     let inv_id = Uuid::now_v7();
     let _ = sqlx::query(
-        "INSERT INTO wa_invoices (id, order_id, user_id, plan_id, plan_code, plan_name, amount_idr, status) \
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'pending')",
+        "INSERT INTO wa_invoices (id, order_id, user_id, plan_id, plan_code, plan_name, amount_idr, coupon_code, status) \
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')",
     )
-    .bind(inv_id).bind(&order_id).bind(user.id).bind(plan_id).bind(&code).bind(&name).bind(price)
+    .bind(inv_id).bind(&order_id).bind(user.id).bind(plan_id).bind(&code).bind(&name).bind(price).bind(&coupon_code)
     .execute(&state.pool).await;
 
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://127.0.0.1:8090".into());
@@ -242,8 +345,8 @@ pub async fn midtrans_notification(State(state): State<AppState>, Json(payload):
         return (StatusCode::FORBIDDEN, "invalid signature").into_response();
     }
 
-    let inv: Option<(Uuid, Uuid, Uuid, i64, i32, String)> = sqlx::query_as(
-        "SELECT id, user_id, plan_id, amount_idr, period_days, status FROM wa_invoices WHERE order_id=$1",
+    let inv: Option<(Uuid, Uuid, Uuid, i64, i32, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, user_id, plan_id, amount_idr, period_days, status, coupon_code FROM wa_invoices WHERE order_id=$1",
     )
     .bind(order_id)
     .fetch_optional(&state.pool)
@@ -251,7 +354,7 @@ pub async fn midtrans_notification(State(state): State<AppState>, Json(payload):
     .ok()
     .flatten();
     // order tak dikenal → 200 (jangan picu retry badai)
-    let Some((inv_id, user_id, plan_id, amount_idr, period_days, cur_status)) = inv else {
+    let Some((inv_id, user_id, plan_id, amount_idr, period_days, cur_status, coupon_code)) = inv else {
         return (StatusCode::OK, "ignored").into_response();
     };
     if cur_status == "paid" {
@@ -289,6 +392,11 @@ pub async fn midtrans_notification(State(state): State<AppState>, Json(payload):
                     .execute(&mut *tx).await;
                     let _ = sqlx::query("UPDATE wa_invoices SET applied_at=now() WHERE id=$1 AND applied_at IS NULL")
                         .bind(inv_id).execute(&mut *tx).await;
+                    // Tambah pemakaian kupon (bila ada).
+                    if let Some(cc) = &coupon_code {
+                        let _ = sqlx::query("UPDATE wa_coupons SET used_count=used_count+1 WHERE upper(code)=upper($1)")
+                            .bind(cc).execute(&mut *tx).await;
+                    }
                 }
                 let _ = tx.commit().await;
                 (StatusCode::OK, "ok").into_response()

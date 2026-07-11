@@ -84,6 +84,7 @@ pub async fn ensure(pool: &PgPool) {
     // (section, label, icon, url, active_key, permission, sort)
     let extras: &[(&str, &str, &str, &str, &str, Option<&str>, i32)] = &[
         ("Sistem", "Master Plan", "card", "/admin/plans", "plans", Some("view_resources"), 115),
+        ("Sistem", "Kupon", "card", "/admin/coupons", "coupons", Some("view_resources"), 116),
         ("Menu", "Kontak", "users", "/admin/wa/contacts", "contacts", None, 55),
         ("Menu", "Auto-reply", "bolt", "/admin/wa/autoreply", "autoreply", None, 56),
         ("Menu", "Knowledge AI", "chat", "/admin/wa/knowledge", "knowledge", None, 57),

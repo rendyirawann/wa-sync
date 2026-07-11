@@ -31,6 +31,8 @@
 .pcard li.off{color:var(--muted);text-decoration:none}.pcard li.off .dot{background:#eef0f4;color:#aab}
 .pcard .ft{padding:0 22px 22px}
 .pcard .ft button{width:100%}
+.cpn{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:12.5px;margin-bottom:8px;outline:none;text-transform:uppercase}
+.cpn:focus{border-color:var(--primary)}
 .curtag{background:var(--primary);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:6px;letter-spacing:.04em}
 .btn-soft{width:100%;background:var(--bg);color:var(--ink2);font-weight:700;border:none;border-radius:9px;padding:11px;font-size:13.5px}
 .panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
@@ -99,6 +101,7 @@
           <form method="post" action="/admin/wa/billing/checkout">
             <input type="hidden" name="_token" value="{{ csrf_token }}">
             <input type="hidden" name="plan_id" value="{{ p.id }}">
+            <input name="coupon" class="cpn" placeholder="Kode kupon (opsional)" autocomplete="off">
             <button type="submit" class="btn btn-pri">Langganan</button>
           </form>
         {% elif p.price == 0 %}
@@ -119,7 +122,7 @@
         <tbody>
           {% for i in invoices %}
           <tr>
-            <td class="mono">{{ i.order_id }}</td>
+            <td class="mono"><a href="/admin/wa/billing/invoice/{{ i.order_id }}" style="color:var(--primary);text-decoration:none">{{ i.order_id }}</a></td>
             <td>{{ i.plan }}</td>
             <td>Rp {{ i.amount_fmt }}</td>
             <td><span class="ist {{ i.status }}">{{ i.status }}</span></td>

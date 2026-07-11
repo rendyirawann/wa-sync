@@ -9,6 +9,7 @@ mod billing;
 mod broadcast;
 mod broadcast_engine;
 mod contacts;
+mod coupons;
 mod dash;
 mod datatables;
 mod inbox;
@@ -142,10 +143,12 @@ async fn main() -> anyhow::Result<()> {
         let dg_state = state.clone();
         tokio::spawn(async move {
             billing::downgrade_expired(&dg_state.pool).await;
+            billing::send_expiry_reminders(&dg_state.pool).await;
             let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
             loop {
                 tick.tick().await;
                 billing::downgrade_expired(&dg_state.pool).await;
+                billing::send_expiry_reminders(&dg_state.pool).await;
             }
         });
     }
@@ -235,6 +238,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/billing", get(billing::index))
         .route("/admin/wa/billing/checkout", post(billing::checkout))
         .route("/admin/wa/billing/finish", get(billing::finish))
+        .route("/admin/wa/billing/invoice/{order_id}", get(billing::invoice))
+        // --- Kupon (Superadmin) ---
+        .route("/admin/coupons", get(coupons::index).post(coupons::create))
+        .route("/admin/coupons/{id}", axum::routing::delete(coupons::destroy))
         // --- User / Role / Settings (gating: view_resources) ---
         .merge(user_routes)
         .merge(role_routes)
