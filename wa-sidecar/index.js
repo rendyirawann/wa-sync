@@ -22,7 +22,22 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const authDir = (id) => path.join(HERE, 'auth', String(id).replace(/[^a-zA-Z0-9_-]/g, ''));
 // Media masuk disimpan ke storage yang di-serve Rust di /storage
 const MEDIA_DIR = path.join(HERE, '..', 'storage', 'app', 'public', 'wa-media');
+const QUEUE_DIR = path.join(HERE, 'queue');
 const safeId = (id) => String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+const queueFile = (id) => path.join(QUEUE_DIR, safeId(id) + '.json');
+// Persistensi antrian: agar pesan yang belum terkirim TIDAK hilang saat sidecar restart.
+async function loadQueue(id) {
+  try { const arr = JSON.parse(await fs.readFile(queueFile(id), 'utf8')); return Array.isArray(arr) ? arr : []; }
+  catch { return []; }
+}
+function saveQueue(id) {
+  const s = sessions.get(id);
+  if (!s) return;
+  if (s._saveT) clearTimeout(s._saveT);
+  s._saveT = setTimeout(async () => {
+    try { await fs.mkdir(QUEUE_DIR, { recursive: true }); await fs.writeFile(queueFile(id), JSON.stringify(s.q || [])); } catch { /* ignore */ }
+  }, 400);
+}
 function extFromMime(mime) {
   const map = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/3gpp': '3gp', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'application/pdf': 'pdf' };
   if (!mime) return 'bin';
@@ -119,7 +134,8 @@ async function startSession(id, level, sim) {
   // Mode uji / SIMULASI: sesi "tersambung" palsu tanpa Baileys nyata (global DRY atau per-sesi sim).
   if (DRY || sim) {
     const d = sessions.get(id) || {};
-    d.status = 'connected'; d.q = d.q || [];
+    d.status = 'connected';
+    if (!d.q || !d.q.length) d.q = await loadQueue(id);
     d.sim = !!sim;
     d.level = level || d.level || 'normal'; d.cfg = cfgFor(d.level);
     sessions.set(id, d);
@@ -134,6 +150,7 @@ async function startSession(id, level, sim) {
   s.starting = true;
   s.level = level || s.level || 'normal'; s.cfg = cfgFor(s.level);
   await seedCounters(s, id);
+  if (!s.q || !s.q.length) s.q = await loadQueue(id); // pulihkan antrian tertunda
   s.status = s.status === 'connected' ? s.status : 'connecting';
   sessions.set(id, s);
 
@@ -289,6 +306,7 @@ function enqueue(id, to, text, media, location) {
   if (!s) return { ok: false, error: 'unknown_session' };
   s.q = s.q || [];
   s.q.push({ to, text, media: media || null, location: location || null });
+  saveQueue(id);
   if (!s.pumping) pump(id).catch((e) => app.log.error(`pump ${id}: ${e.message}`));
   return { ok: true, position: s.q.length };
 }
@@ -347,6 +365,7 @@ async function pump(id) {
         s.dCnt = (s.dCnt || 0) + 1;
       } catch (e) { err = e.message; }
       s.q.shift();
+      saveQueue(id);
       postEvent(id, 'sent', { remote_jid: jid, body: msg.text, wa_msg_id: waid, status: ok ? 'sent' : 'failed', error: err });
       if (s.q.length) await sleep(rand(cfg.minGap, cfg.maxGap)); // jeda acak antar pesan
     }

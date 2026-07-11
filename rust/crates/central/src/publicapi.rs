@@ -152,6 +152,27 @@ pub async fn create_message(State(state): State<AppState>, msg: ApiMsg) -> Respo
     }
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn media_type_inference() {
+        assert_eq!(super::infer_media_type("https://x/a.JPG"), "image");
+        assert_eq!(super::infer_media_type("https://x/a.png?v=1"), "image");
+        assert_eq!(super::infer_media_type("https://x/clip.mp4"), "video");
+        assert_eq!(super::infer_media_type("https://x/file.pdf"), "document");
+        assert_eq!(super::infer_media_type("https://x/no-ext"), "document");
+    }
+
+    #[test]
+    fn rate_limit_blocks_after_60() {
+        let key = "test-rl-unique-key";
+        for _ in 0..60 {
+            assert!(super::rate_ok(key));
+        }
+        assert!(!super::rate_ok(key)); // ke-61 diblokir
+    }
+}
+
 /// Tebak jenis media dari ekstensi URL bila tak diberikan.
 fn infer_media_type(url: &str) -> &'static str {
     let u = url.split(['?', '#']).next().unwrap_or(url).to_lowercase();

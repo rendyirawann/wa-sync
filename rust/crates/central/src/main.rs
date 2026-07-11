@@ -305,7 +305,8 @@ async fn main() -> anyhow::Result<()> {
         .nest_service("/storage", ServeDir::new(storage_dir))
         .fallback(not_found)
         .with_state(state)
-        .layer(session_layer);
+        .layer(session_layer)
+        .layer(from_fn(security_headers));
 
     let addr = "127.0.0.1:8090";
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -316,6 +317,17 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
     Ok(())
+}
+
+/// Middleware: tambah header keamanan dasar ke semua respons.
+async fn security_headers(req: axum::extract::Request, next: axum::middleware::Next) -> axum::response::Response {
+    let mut res = next.run(req).await;
+    let h = res.headers_mut();
+    h.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
+    h.insert("X-Frame-Options", "SAMEORIGIN".parse().unwrap());
+    h.insert("Referrer-Policy", "strict-origin-when-cross-origin".parse().unwrap());
+    h.insert("X-XSS-Protection", "0".parse().unwrap());
+    res
 }
 
 /// Landing page publik (WA Service) di `/`.

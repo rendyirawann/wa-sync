@@ -134,6 +134,29 @@ pub async fn event(
     notify::wa(&to_user, &ev.session_id, &ev.typ, ev.data.clone());
     // Webhook keluar (non-blocking; difilter per config sesi).
     crate::webhook::dispatch(state.pool.clone(), sid, &ev.typ, ev.data.clone());
+    // Alert: email pemilik saat nomor bermasalah serius (banned / logout).
+    if matches!(ev.typ.as_str(), "banned" | "logged_out") {
+        let pool2 = state.pool.clone();
+        let typ = ev.typ.clone();
+        tokio::spawn(async move {
+            if let Ok(Some((email, label))) = sqlx::query_as::<_, (String, String)>(
+                "SELECT u.email, COALESCE(s.label,'') FROM wa_sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1",
+            )
+            .bind(sid)
+            .fetch_optional(&pool2)
+            .await
+            {
+                let reason = if typ == "banned" { "diblokir WhatsApp" } else { "keluar / logout" };
+                let html = format!(
+                    "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto\">\
+                       <h2 style=\"color:#e11d48\">Nomor WhatsApp bermasalah</h2>\
+                       <p>Nomor <b>{label}</b> pada layanan Anda <b>{reason}</b>. \
+                       Silakan cek dan hubungkan ulang bila diperlukan.</p></div>"
+                );
+                crate::mailer::send_html(&email, "Peringatan: nomor WhatsApp bermasalah — WA Service", html).await;
+            }
+        });
+    }
     (StatusCode::OK, "ok")
 }
 

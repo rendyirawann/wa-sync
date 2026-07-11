@@ -8,6 +8,7 @@
 # Kredensial sesi WhatsApp (Baileys) — setara login WA, sangat sensitif
 # (spesifik ke folder sidecar; JANGAN pakai **/auth/ karena ikut mengabaikan templates/auth/)
 /wa-sidecar/auth/
+/wa-sidecar/queue/
 # Kunci / sertifikat
 *.pem
 *.key
