@@ -167,6 +167,17 @@ async function startSession(id, level, sim) {
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', (u) => onConn(id, u).catch((e) => app.log.error(e.message)));
   sock.ev.on('messages.upsert', (m) => onMsg(id, m).catch((e) => app.log.error(e.message)));
+  // Status pengiriman pesan keluar (2=server ack/sent, 3=delivered, 4=read) → update centang.
+  sock.ev.on('messages.update', (updates) => {
+    for (const u of updates || []) {
+      const st = u.update?.status;
+      const waid = u.key?.id;
+      if (!waid || st === undefined || st === null) continue;
+      const map = { 2: 'sent', 3: 'delivered', 4: 'read', 5: 'played' };
+      const status = map[st] || null;
+      if (status) postEvent(id, 'status', { wa_msg_id: waid, status });
+    }
+  });
 }
 
 async function onConn(id, u) {

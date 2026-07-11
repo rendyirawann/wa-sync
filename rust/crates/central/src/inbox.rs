@@ -16,12 +16,12 @@ use tower_sessions::Session;
 use crate::{auth, rbac::CurrentUser, view, AppState};
 
 const CONV_ALL: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false) \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false), m.direction, COALESCE(extract(epoch from c.last_read_at)::bigint, 0) \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     ORDER BY m.session_id, m.remote_jid, m.created_at DESC";
 const CONV_OWN: &str = "SELECT DISTINCT ON (m.session_id, m.remote_jid) m.session_id, m.remote_jid, m.body, \
-    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false) \
+    to_char(m.created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), s.label, extract(epoch from m.created_at)::bigint, COALESCE(c.name,''), COALESCE(c.ai_persona,''), COALESCE(m.msg_type,'text'), COALESCE(c.ai_paused,false), m.direction, COALESCE(extract(epoch from c.last_read_at)::bigint, 0) \
     FROM wa_messages m JOIN wa_sessions s ON m.session_id = s.id \
     LEFT JOIN wa_contacts c ON c.session_id = m.session_id AND c.jid = m.remote_jid \
     WHERE s.user_id = $1 \
@@ -55,7 +55,7 @@ async fn owns_session(state: &AppState, user: &CurrentUser, sid: Uuid) -> bool {
 }
 
 pub async fn index(user: CurrentUser, session: Session, State(state): State<AppState>) -> Html<String> {
-    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String, String, bool)> = if user.is_superadmin() {
+    let mut rows: Vec<(Uuid, String, Option<String>, Option<String>, String, i64, String, String, String, bool, String, i64)> = if user.is_superadmin() {
         sqlx::query_as(CONV_ALL).fetch_all(&state.pool).await.unwrap_or_default()
     } else {
         sqlx::query_as(CONV_OWN).bind(user.id).fetch_all(&state.pool).await.unwrap_or_default()
@@ -63,6 +63,7 @@ pub async fn index(user: CurrentUser, session: Session, State(state): State<AppS
     rows.sort_by(|a, b| b.5.cmp(&a.5)); // terbaru dulu
     let convs: Vec<_> = rows.iter().map(|r| {
         let phone = r.1.split('@').next().unwrap_or(&r.1).to_string();
+        let unread = r.10 == "in" && r.5 > r.11; // pesan masuk terbaru lebih baru dari last_read
         json!({
             "session_id": r.0.to_string(),
             "jid": r.1,
@@ -73,6 +74,7 @@ pub async fn index(user: CurrentUser, session: Session, State(state): State<AppS
             "when": r.3.clone().unwrap_or_default(),
             "session_label": r.4,
             "ai_paused": r.9,
+            "unread": unread,
         })
     }).collect();
 
@@ -93,6 +95,12 @@ pub async fn thread(user: CurrentUser, State(state): State<AppState>, Query(q): 
         return (StatusCode::NOT_FOUND, "not found").into_response();
     }
     let jid = q.get("jid").cloned().unwrap_or_default();
+    // Tandai percakapan sudah dibaca (untuk indikator unread).
+    let _ = sqlx::query(
+        "INSERT INTO wa_contacts (session_id, jid, last_read_at, updated_at) VALUES ($1,$2,now(),now()) \
+         ON CONFLICT (session_id, jid) DO UPDATE SET last_read_at=now(), updated_at=now()",
+    )
+    .bind(sid).bind(&jid).execute(&state.pool).await;
     let rows: Vec<(String, Option<String>, String, String, String, Option<String>)> = sqlx::query_as(
         "SELECT direction, body, to_char(created_at AT TIME ZONE 'Asia/Jakarta','DD Mon HH24:MI'), status, COALESCE(msg_type,'text'), media_url \
          FROM wa_messages WHERE session_id=$1 AND remote_jid=$2 ORDER BY created_at ASC LIMIT 300",

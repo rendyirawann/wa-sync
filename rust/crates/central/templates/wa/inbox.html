@@ -15,6 +15,11 @@
 .conv .tm{font-size:11px;color:var(--muted);flex:none}
 .conv .lastmsg{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .conv .sess{font-size:11px;color:var(--primary);margin-top:1px}
+.conv.unread .nm{font-weight:800}
+.unread-dot{width:9px;height:9px;border-radius:50%;background:var(--primary);display:inline-block;margin-left:6px;flex:none}
+.searchbar{padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--card);z-index:2}
+.searchbar input{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-family:inherit;font-size:13px;outline:none}
+.searchbar input:focus{border-color:var(--primary)}
 .thread-wrap{display:flex;flex-direction:column;min-width:0}
 .thread-head{padding:12px 18px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .thread-head .hact{display:flex;gap:8px}
@@ -48,11 +53,12 @@ textarea.inp{resize:vertical;line-height:1.5}
 <div class="wrap">
   <div class="inbox">
     <div class="conv-list" id="convList">
+      <div class="searchbar"><input id="convSearch" placeholder="🔍 Cari nama / nomor…" autocomplete="off"></div>
       {% for c in conversations %}
-      <div class="conv" data-session="{{ c.session_id }}" data-jid="{{ c.jid }}" data-phone="{{ c.phone }}" data-name="{{ c.name }}" data-persona="{{ c.persona }}" data-paused="{{ c.ai_paused }}">
+      <div class="conv{% if c.unread %} unread{% endif %}" data-session="{{ c.session_id }}" data-jid="{{ c.jid }}" data-phone="{{ c.phone }}" data-name="{{ c.name }}" data-persona="{{ c.persona }}" data-paused="{{ c.ai_paused }}">
         <div class="av">{% if c.name %}{{ c.name | truncate(length=2, end="") }}{% else %}{{ c.phone | truncate(length=2, end="") }}{% endif %}</div>
         <div class="meta">
-          <div class="top"><span class="nm">{% if c.name %}{{ c.name }}{% else %}+{{ c.phone }}{% endif %}</span><span class="tm">{{ c.when }}</span></div>
+          <div class="top"><span class="nm">{% if c.name %}{{ c.name }}{% else %}+{{ c.phone }}{% endif %}{% if c.unread %}<span class="unread-dot"></span>{% endif %}</span><span class="tm">{{ c.when }}</span></div>
           <div class="lastmsg">{{ c.last | truncate(length=40) }}</div>
           <div class="sess">{{ c.session_label }}</div>
         </div>
@@ -101,7 +107,16 @@ textarea.inp{resize:vertical;line-height:1.5}
     if(t==='document') return '<a class="rdoc" href="'+esc(url)+'" target="_blank">📄 '+esc(m.name||'Dokumen')+'</a>';
     return '';
   }
-  function bubble(m){var b=document.createElement('div');b.className='bubble '+(m.direction==='in'?'in':'out');var cap=m.body?('<div>'+esc(m.body)+'</div>'):'';b.innerHTML=mediaHtml(m)+cap+'<div class="t">'+esc(m.when||'')+'</div>';return b;}
+  function tick(m){
+    if(m.direction!=='out') return '';
+    var s=m.status||'';
+    if(s==='read'||s==='played') return ' <span style="color:#53bdeb;font-weight:700">✓✓</span>';
+    if(s==='delivered') return ' <span>✓✓</span>';
+    if(s==='sent'||s==='queued') return ' <span>✓</span>';
+    if(s==='failed') return ' <span style="color:var(--danger)">!</span>';
+    return '';
+  }
+  function bubble(m){var b=document.createElement('div');b.className='bubble '+(m.direction==='in'?'in':'out');var cap=m.body?('<div>'+esc(m.body)+'</div>'):'';b.innerHTML=mediaHtml(m)+cap+'<div class="t">'+esc(m.when||'')+tick(m)+'</div>';return b;}
   function renderHead(){
     var nm = cur.name ? (esc(cur.name)+' <span style="font-weight:500;color:var(--muted);font-size:12.5px">+'+esc(cur.phone)+'</span>') : ('+'+esc(cur.phone));
     var tag = cur.persona ? ' <span style="font-size:11px;font-weight:700;color:#7a5af0;background:#efeaff;padding:2px 8px;border-radius:12px">💕 persona</span>' : '';
@@ -159,9 +174,32 @@ textarea.inp{resize:vertical;line-height:1.5}
   document.querySelectorAll('.conv').forEach(function(c){
     c.addEventListener('click',function(){
       document.querySelectorAll('.conv').forEach(function(x){x.classList.remove('active');}); c.classList.add('active');
+      c.classList.remove('unread'); var d=c.querySelector('.unread-dot'); if(d) d.remove();
       loadThread(c.getAttribute('data-session'),c.getAttribute('data-jid'),c.getAttribute('data-phone'),c.getAttribute('data-name'),c.getAttribute('data-persona'),c.getAttribute('data-paused'));
     });
   });
+  // Pencarian percakapan (filter klien).
+  var srch=document.getElementById('convSearch');
+  if(srch) srch.addEventListener('input',function(){
+    var q=this.value.toLowerCase();
+    document.querySelectorAll('.conv').forEach(function(c){
+      var t=((c.getAttribute('data-name')||'')+' '+(c.getAttribute('data-phone')||'')).toLowerCase();
+      c.style.display=(t.indexOf(q)>=0)?'':'none';
+    });
+  });
+  // Izin notifikasi browser.
+  if('Notification' in window && Notification.permission==='default'){ try{ Notification.requestPermission(); }catch(e){} }
+  function notify(data){
+    if(!('Notification' in window) || Notification.permission!=='granted') return;
+    try{ new Notification('Pesan WhatsApp baru', { body: (data.body||'📎 Media') }); }catch(e){}
+  }
+  function markUnread(jid){
+    var c=document.querySelector('.conv[data-jid="'+CSS.escape(jid||'')+'"]'); if(!c) return;
+    c.classList.add('unread');
+    if(!c.querySelector('.unread-dot')){ var nm=c.querySelector('.nm'); if(nm){ var dot=document.createElement('span'); dot.className='unread-dot'; nm.appendChild(dot); } }
+    // pindahkan ke atas daftar
+    var list=document.getElementById('convList'); var first=list.querySelector('.conv'); if(first && first!==c) list.insertBefore(c, first);
+  }
   form.addEventListener('submit',function(e){
     e.preventDefault(); var inp=document.getElementById('rText'); var txt=inp.value.trim(); if(!txt||!cur.session)return;
     var body=new URLSearchParams({session_id:cur.session,to:cur.jid,text:txt,_token:CSRF});
@@ -171,11 +209,17 @@ textarea.inp{resize:vertical;line-height:1.5}
         else alert('Gagal kirim: '+(j.message||''));
       }).catch(function(){alert('Error jaringan');});
   });
-  // realtime untuk percakapan aktif
+  // realtime: pesan masuk (percakapan aktif → append; lainnya → unread + notif).
   window.addEventListener('wa-event',function(e){
-    var d=e.detail||{}; if(!cur.session||d.session_id!==cur.session) return;
-    var data=d.data||{};
-    if(d.event==='message' && (data.remote_jid||'')===cur.jid){ var em=thread.querySelector('.empty-conv'); if(em)em.remove(); thread.appendChild(bubble({direction:'in',body:data.body,type:data.msg_type,media:data.media_url,name:data.media_name,when:'baru saja'})); thread.scrollTop=thread.scrollHeight; }
+    var d=e.detail||{}; var data=d.data||{};
+    if(d.event!=='message') return;
+    if(cur.session===d.session_id && (data.remote_jid||'')===cur.jid){
+      var em=thread.querySelector('.empty-conv'); if(em)em.remove();
+      thread.appendChild(bubble({direction:'in',body:data.body,type:data.msg_type,media:data.media_url,name:data.media_name,when:'baru saja'}));
+      thread.scrollTop=thread.scrollHeight;
+    } else {
+      markUnread(data.remote_jid); notify(data);
+    }
   });
 })();
 </script>

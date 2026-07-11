@@ -200,6 +200,8 @@ const STMTS: &[&str] = &[
         enabled boolean NOT NULL DEFAULT true, \
         created_at timestamptz NOT NULL DEFAULT now())",
     "CREATE INDEX IF NOT EXISTS idx_wa_knowledge_session ON wa_knowledge (session_id)",
+    // Batch 8: tandai percakapan sudah dibaca (untuk indikator unread).
+    "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS last_read_at timestamptz",
     // Batch 5: billing lanjutan (reminder expiry + kupon + invoice).
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_reminded_for timestamptz",
     "CREATE TABLE IF NOT EXISTS wa_coupons (\

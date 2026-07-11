@@ -111,6 +111,19 @@ pub async fn event(
             .execute(pool).await;
             crate::quota::bump(pool, sid, if st == "failed" { "failed" } else { "sent" }).await;
         }
+        "status" => {
+            // Update centang pesan keluar (sent→delivered→read), tak pernah turun peringkat.
+            let waid = ev.data.get("wa_msg_id").and_then(Value::as_str).unwrap_or("");
+            let status = ev.data.get("status").and_then(Value::as_str).unwrap_or("");
+            if !waid.is_empty() && !status.is_empty() {
+                let _ = sqlx::query(
+                    "UPDATE wa_messages SET status=$3 WHERE session_id=$1 AND wa_message_id=$2 AND direction='out' \
+                     AND (CASE status WHEN 'played' THEN 5 WHEN 'read' THEN 4 WHEN 'delivered' THEN 3 WHEN 'sent' THEN 2 ELSE 1 END) \
+                       < (CASE $3 WHEN 'played' THEN 5 WHEN 'read' THEN 4 WHEN 'delivered' THEN 3 WHEN 'sent' THEN 2 ELSE 1 END)",
+                )
+                .bind(sid).bind(waid).bind(status).execute(pool).await;
+            }
+        }
         _ => {}
     }
 
