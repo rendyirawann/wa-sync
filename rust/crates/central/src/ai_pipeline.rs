@@ -93,11 +93,16 @@ pub async fn maybe_reply(state: AppState, session_id: Uuid, remote_jid: String) 
     .await
     .ok()
     .flatten();
-    let system = match persona {
+    let mut system = match persona {
         Some(p) if !p.trim().is_empty() => p,
         _ if !sys.trim().is_empty() => sys,
         _ => ai::DEFAULT_SYSTEM.to_string(),
     };
+    // Suntik knowledge base relevan (RAG-lite) berdasarkan pesan user terakhir.
+    let query = history.iter().rev().find(|(role, _)| role == "user").map(|(_, b)| b.clone()).unwrap_or_default();
+    if let Some(kb) = crate::knowledge::retrieve(&state.pool, session_id, &query).await {
+        system = format!("{system}\n\n{kb}");
+    }
     if let Some(reply) = ai::reply(&model, &system, &history).await {
         // Kirim balik ke JID ASLI (lengkap dgn domain) supaya balasan sampai ke chat yg benar,
         // termasuk alamat @lid baru WhatsApp. Sidecar memakai JID apa adanya bila mengandung '@'.

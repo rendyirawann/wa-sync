@@ -191,6 +191,15 @@ const STMTS: &[&str] = &[
         created_at timestamptz NOT NULL DEFAULT now())",
     "CREATE INDEX IF NOT EXISTS idx_wa_autoreply_session ON wa_autoreply (session_id)",
     "ALTER TABLE wa_contacts ADD COLUMN IF NOT EXISTS ai_paused boolean NOT NULL DEFAULT false",
+    // Batch 4: knowledge base AI (FAQ/katalog) — disuntik ke prompt saat relevan (RAG-lite).
+    "CREATE TABLE IF NOT EXISTS wa_knowledge (\
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(), \
+        session_id uuid NOT NULL REFERENCES wa_sessions(id) ON DELETE CASCADE, \
+        title text NOT NULL DEFAULT '', \
+        content text NOT NULL DEFAULT '', \
+        enabled boolean NOT NULL DEFAULT true, \
+        created_at timestamptz NOT NULL DEFAULT now())",
+    "CREATE INDEX IF NOT EXISTS idx_wa_knowledge_session ON wa_knowledge (session_id)",
 ];
 
 pub async fn run(pool: &PgPool) -> anyhow::Result<()> {

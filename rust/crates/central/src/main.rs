@@ -12,6 +12,7 @@ mod contacts;
 mod dash;
 mod datatables;
 mod inbox;
+mod knowledge;
 mod logactivity;
 mod mailer;
 mod maintenance;
@@ -224,6 +225,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/admin/wa/autoreply", get(autoreply::index).post(autoreply::create))
         .route("/admin/wa/autoreply/create", post(autoreply::create))
         .route("/admin/wa/autoreply/{id}", axum::routing::delete(autoreply::destroy))
+        // --- AI Knowledge Base (Batch 4) ---
+        .route("/admin/wa/knowledge", get(knowledge::index).post(knowledge::create))
+        .route("/admin/wa/knowledge/create", post(knowledge::create))
+        .route("/admin/wa/knowledge/{id}", axum::routing::delete(knowledge::destroy))
         .route("/admin/wa/api-keys", get(wa::api_keys))
         .route("/admin/wa/webhooks", get(wa::webhooks))
         // --- Billing & Plan (Fase P5, Midtrans) ---

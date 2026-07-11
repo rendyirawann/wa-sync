@@ -1,0 +1,83 @@
+{% extends "layout/wa.html" %}
+{% block title %}Knowledge Base{% endblock %}
+{% block page_title %}AI Knowledge Base{% endblock %}
+{% block page_crumb %}WhatsApp <span>•</span> <b>Knowledge Base</b>{% endblock %}
+
+{% block style %}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:18px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.panel .ph{padding:16px 20px;border-bottom:1px solid var(--line)}
+.panel .ph h3{font-size:15px;font-weight:700}.panel .ph .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.bd{padding:18px 20px}
+.flbl{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin:12px 0 5px}.flbl:first-child{margin-top:0}
+.inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;outline:none}
+.inp:focus{border-color:var(--primary)}
+textarea.inp{resize:vertical;line-height:1.55}
+.kbcard{border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:12px}
+.kbcard h4{font-size:13.5px;font-weight:700;margin-bottom:4px}
+.kbcard p{font-size:12.5px;color:var(--ink2);line-height:1.55;white-space:pre-wrap}
+.kbcard .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.kbcard .sess{font-size:11px;color:var(--primary)}
+.del{background:none;border:none;color:var(--danger);font-weight:600;font-size:12px;cursor:pointer}
+.empty{padding:30px;text-align:center;color:var(--muted);font-size:13px}
+.note{background:#eef2ff;border:1px dashed #a5b4fc;color:#4338ca;border-radius:10px;padding:11px 13px;font-size:12px;margin-bottom:14px}
+{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="note">🧠 AI akan memakai info di sini saat menjawab (bila relevan dengan pertanyaan). Isi FAQ, katalog produk, jam buka, kebijakan, dsb. Satu entri = satu topik.</div>
+  <div class="grid">
+    <div class="panel">
+      <div class="ph"><h3>Tambah Pengetahuan</h3><div class="sub">FAQ / katalog untuk AI.</div></div>
+      <div class="bd">
+        {% if sessions | length == 0 %}
+          <div class="empty">Belum ada nomor. Tautkan dulu.</div>
+        {% else %}
+        <form method="post" action="/admin/wa/knowledge/create">
+          <input type="hidden" name="_token" value="{{ csrf_token }}">
+          <label class="flbl">Nomor</label>
+          <select name="session_id" class="inp" required>
+            {% for s in sessions %}<option value="{{ s.id }}">{{ s.label }}{% if s.phone %} (+{{ s.phone }}){% endif %}</option>{% endfor %}
+          </select>
+          <label class="flbl">Judul / topik</label>
+          <input name="title" class="inp" placeholder="mis. Jam buka, Harga paket, Ongkir">
+          <label class="flbl">Isi</label>
+          <textarea name="content" class="inp" rows="5" placeholder="mis. Toko buka Senin–Sabtu 08.00–21.00. Minggu libur. Respon chat 08.00–17.00." required></textarea>
+          <button type="submit" class="btn btn-pri" style="width:100%;margin-top:16px">Tambah</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h3>Isi Knowledge Base</h3><div class="sub">Dipakai AI otomatis saat relevan.</div></div>
+      <div class="bd">
+        {% for k in items %}
+        <div class="kbcard" data-id="{{ k.id }}">
+          {% if k.title %}<h4>{{ k.title }}</h4>{% endif %}
+          <p>{{ k.content }}</p>
+          <div class="meta"><span class="sess">{{ k.session_label }}{% if not k.enabled %} · nonaktif{% endif %}</span><button class="del" data-id="{{ k.id }}">Hapus</button></div>
+        </div>
+        {% endfor %}
+        {% if items | length == 0 %}<div class="empty">Belum ada pengetahuan. Tambahkan FAQ/katalog di kiri.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var CSRF="{{ csrf_token }}";
+  document.querySelectorAll('.del').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(!confirm('Hapus entri ini?')) return;
+      fetch('/admin/wa/knowledge/'+b.getAttribute('data-id'),{method:'DELETE',credentials:'same-origin',headers:{'X-CSRF-TOKEN':CSRF}})
+        .then(function(){ var c=b.closest('.kbcard'); if(c) c.remove(); });
+    });
+  });
+})();
+</script>
+{% endblock %}
